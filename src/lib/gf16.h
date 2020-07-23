@@ -11,10 +11,14 @@ typedef struct bitsliced_gf16 {
     uint64_t y_x;
 } bitsliced_gf16_t;
 
-void bitsliced_addition(bitsliced_gf16_t a_times_b, bitsliced_gf16_t a, bitsliced_gf16_t b);
+int bitsliced_gf16_is_one(bitsliced_gf16_t in);
+
+void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsliced_gf16_t *b);
 
 void bitsliced_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b);
 
 void bitsliced_square(bitsliced_gf16_t *a_square, bitsliced_gf16_t *a);
+
+void bitsliced_inversion(bitsliced_gf16_t *a_inverse, bitsliced_gf16_t *a);
 
 #endif

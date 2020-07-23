@@ -1,5 +1,6 @@
 #include "../lib/gf16.h"
 #include "timing-functions.h"
+#include "../lib/keygen.h"
 #include <stdio.h>
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
@@ -65,14 +66,34 @@ int main(int argc, char **argv) {
 
     bitsliced_square(&result, &i);
 
+    bitsliced_gf16_t i_inverse, ones;
+
+    //test all elements of GF16
+    i.c = 0xAAAA;
+    i.y = 0xCCCC;
+    i.x = 0xF0F0;
+    i.y_x = 0xFF00;
+
+    ones.c = 0xFFFF;
+    ones.y = 0;
+    ones.x = 0;
+    ones.y_x = 0;
+
+    bitsliced_inversion(&i_inverse, &i);
+    bitsliced_multiplication(&result, &i, &i_inverse);
 
     unsigned int b;
     for (b = 0; b < 16; b++) {
         print_bitsliced(i, b);
-        printf(" square = ");
+        printf(" inverse = ");
+        print_bitsliced(i_inverse, b);
+        printf(". Result of multiplication is = ");
         print_bitsliced(result, b);
         putchar(10);
     }
+
+    char t[2][O1];
+    generate_random_matrix_t(t, NULL);
 
     return 0;
 }
