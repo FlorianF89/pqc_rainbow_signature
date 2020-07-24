@@ -19,4 +19,8 @@ int generate_random_matrix_t(matrix_t_t t, prng_t *prng);
 
 int generate_random_matrices_f(matrix_fi_t f[O1 + O2], prng_t *prng);
 
+void transpose_and_add_32x32_gf16_matrices(matrix_s_t s1_plus_s2t, matrix_s_t s1, matrix_s_t s2);
+
+void gaussian_elimination_for_32x32_gf16_matrix(matrix_s_t s);
+
 #endif //PQC_RAINBOW_KEYGEN_H

@@ -3,6 +3,11 @@ project(pqc_rainbow C)
 
 set(CMAKE_C_STANDARD 99)
 
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -o3")
+    message("c flags = ${CMAKE_C_FLAGS}")
+endif ()
+
 find_package(OpenSSL REQUIRED)
 set(OPENSSL_INCLUDE_DIR "/usr/local/include/")
 include_directories(${OPENSSL_INCLUDE_DIR})

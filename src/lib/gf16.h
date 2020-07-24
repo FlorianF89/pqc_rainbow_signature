@@ -11,6 +11,9 @@ typedef struct bitsliced_gf16 {
     uint64_t y_x;
 } bitsliced_gf16_t;
 
+
+uint64_t gf16_is_zero(bitsliced_gf16_t a, unsigned int position);
+
 int bitsliced_gf16_is_one(bitsliced_gf16_t in);
 
 void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsliced_gf16_t *b);

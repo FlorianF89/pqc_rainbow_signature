@@ -12,6 +12,13 @@ int bitsliced_gf16_is_one(bitsliced_gf16_t in) {
 }
 
 
+uint64_t gf16_is_zero(bitsliced_gf16_t a, unsigned int position) {
+
+    uint64_t ret = (a.c >> position) | (a.y >> position) | (a.x >> position) | (a.y_x >> position);
+    return ret & 0x01u;
+}
+
+
 void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsliced_gf16_t *b) {
     a_times_b->c = a->c ^ b->c;
     a_times_b->y = a->y ^ b->y;
@@ -100,5 +107,4 @@ void bitsliced_inversion(bitsliced_gf16_t *a_inverse, bitsliced_gf16_t *a) {
     a_inverse->y_x ^= tmp3;
 
     a_inverse->c ^= tmp2 & a->c;
-
 }
