@@ -11,6 +11,7 @@ extern "C" {
 #include "../src/lib/keygen.h"
 #include "../src/lib/utils_prng.h"
 #include "../src/lib/utils_hash.h"
+#include "../src/lib/rng.h"
 }
 extern "C" {
 #include "../src/lib/gf16.h"
@@ -191,4 +192,71 @@ TEST(keygen, transpose_and_add_32x32_gf16_matrices) {
         EXPECT_EQ(s1_plus_s1t[i].x, 0xFFFFFFFF ^ (1u << i));
         EXPECT_EQ(s1_plus_s1t[i].y_x, 0xFFFFFFFF ^ (1u << i));
     }
+}
+
+TEST(keygen, guassian_elimination_32x32_gf16_matrices) {
+
+    bitsliced_gf16_t s[32];
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    memset(s, 0x00, sizeof(s));
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    clock_t t;
+    clock_t total = 0;
+    int total_iterations = 10;
+    for (j = 0; j < total_iterations; j++) {
+        for (i = 0; i < 32; i++) {
+            prng_gen(&prng, (unsigned char *) &s[i].c, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &s[i].y, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &s[i].x, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &s[i].y_x, sizeof(uint32_t));
+        }
+        t = clock();
+        gaussian_elimination_for_32x32_gf16_matrix(s);
+        total += clock() - t;
+        uint64_t mask = 0xFFFFFFFE;
+        for (i = 0; i < 32; i++) {
+            EXPECT_EQ(s[i].c & mask, 0);
+            EXPECT_EQ(s[i].y & mask, 0);
+            EXPECT_EQ(s[i].x & mask, 0);
+            EXPECT_EQ(s[i].y_x & mask, 0);
+            mask <<= 1u;
+        }
+    }
+    printf("%f \n", (double) total / total_iterations);
+}
+
+TEST(keygen, multiply_32x32_gf16_matrices) {
+
+    bitsliced_gf16_t a[32], a_times_b[32], identity[32];
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    memset(a, 0x00, sizeof(a));
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    clock_t t;
+    clock_t total = 0;
+    int total_iterations = 10;
+    set_32x32_gf16_matrix_to_identity(identity);
+    for (j = 0; j < total_iterations; j++) {
+        for (i = 0; i < 32; i++) {
+            prng_gen(&prng, (unsigned char *) &a[i].c, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &a[i].y, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &a[i].x, sizeof(uint32_t));
+            prng_gen(&prng, (unsigned char *) &a[i].y_x, sizeof(uint32_t));
+        }
+        t = clock();
+        multiply_32x32_gf16_matrices(a_times_b, a, identity);
+        total += clock() - t;
+        for (i = 0; i < 32; i++) {
+            EXPECT_EQ(a[i].c, a_times_b[i].c);
+            EXPECT_EQ(a[i].y, a_times_b[i].y);
+            EXPECT_EQ(a[i].x, a_times_b[i].x);
+            EXPECT_EQ(a[i].y_x, a_times_b[i].y_x);
+        }
+    }
+    printf("matrix mul: %f \n", (double) total / total_iterations);
 }

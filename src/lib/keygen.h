@@ -23,4 +23,8 @@ void transpose_and_add_32x32_gf16_matrices(matrix_s_t s1_plus_s2t, matrix_s_t s1
 
 void gaussian_elimination_for_32x32_gf16_matrix(matrix_s_t s);
 
+void set_32x32_gf16_matrix_to_identity(bitsliced_gf16_t a[32]);
+
+void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]);
+
 #endif //PQC_RAINBOW_KEYGEN_H
