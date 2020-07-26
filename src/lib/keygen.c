@@ -247,6 +247,41 @@ void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16
     }
 }
 
+int generate_random_32x32_gf16_matrix(bitsliced_gf16_t a[32], prng_t *prng) {
+    int i;
+    if (prng == NULL) {
+        return PRNG_FAILURE;
+    }
+    for (i = 0; i < 32; i++) {
+        prng_gen(prng, (unsigned char *) &a[i].c, sizeof(uint32_t));
+        prng_gen(prng, (unsigned char *) &a[i].y, sizeof(uint32_t));
+        prng_gen(prng, (unsigned char *) &a[i].x, sizeof(uint32_t));
+        prng_gen(prng, (unsigned char *) &a[i].y_x, sizeof(uint32_t));
+    }
+    return SUCCESS;
+}
+
+int generate_random_32x32_gf16_upper_triangular_matrix(bitsliced_gf16_t a[32], prng_t *prng) {
+    unsigned int i;
+    if (prng == NULL) {
+        return PRNG_FAILURE;
+    }
+    uint64_t mask = 1u;
+    for (i = 0; i < 32; i++) {
+        prng_gen(prng, (unsigned char *) &a[i].c, (i + 7) / 8);
+        prng_gen(prng, (unsigned char *) &a[i].y, (i + 7) / 8);
+        prng_gen(prng, (unsigned char *) &a[i].x, (i + 7) / 8);
+        prng_gen(prng, (unsigned char *) &a[i].y_x, (i + 7) / 8);
+        a[i].c &= mask;
+        a[i].y &= mask;
+        a[i].x &= mask;
+        a[i].y_x &= mask;
+        mask <<= 1u;
+        mask |= 1u;
+    }
+    return SUCCESS;
+}
+
 int generate_random_matrix_s(matrix_s_t s, prng_t *prng) {
     if (prng == NULL) {
         return PRNG_FAILURE;
@@ -266,10 +301,7 @@ int generate_random_matrix_s(matrix_s_t s, prng_t *prng) {
         prng_gen(prng, (unsigned char *) &s[O1 + i].y_x, O1 / 8);
     }
 
-    clock_t t = clock();
     gaussian_elimination_for_32x32_gf16_matrix(s);
-    clock_t work_time = (clock() - t);
-    printf("work_time = %lu\n", work_time);
     return SUCCESS;
 }
 
@@ -364,10 +396,25 @@ static int generate_random_matrices_f_i_for_i_in_v2_n(matrix_fi_t f[O2], prng_t 
 
 
 int generate_random_matrices_f(matrix_fi_t f[O1 + O2], prng_t *prng) {
+    if (prng == NULL) {
+        return PRNG_FAILURE;
+    }
     memset(f, 0, sizeof(matrix_fi_t) * (O1 + O2));
 
     generate_random_matrices_f_i_for_i_in_v1_v2(f, prng);
     generate_random_matrices_f_i_for_i_in_v2_n(f + O1, prng);
+
+    return SUCCESS;
+}
+
+int generate_private_key(private_key_t *private_key, prng_t *prng) {
+    if (prng == NULL) {
+        return PRNG_FAILURE;
+    }
+
+    generate_random_matrix_s(private_key->s, prng);
+    generate_random_matrix_t(private_key->t, prng);
+    generate_random_matrices_f(private_key->f, prng);
 
     return SUCCESS;
 }

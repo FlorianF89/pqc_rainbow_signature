@@ -13,6 +13,14 @@ typedef bitsliced_gf16_t matrix_s_t[O1 + O2];
 typedef bitsliced_gf16_t matrix_t_t[(V1 + O1 + O2 + sizeof(uint64_t) - 1) / sizeof(uint64_t)][V1 + O1 + O2];
 typedef matrix_t_t matrix_fi_t;
 
+typedef struct private_key {
+    matrix_s_t s;
+    matrix_t_t t;
+    matrix_fi_t f[O1 + O2];
+} private_key_t;
+
+int generate_private_key(private_key_t *private_key, prng_t *prng);
+
 int generate_random_matrix_s(matrix_s_t s, prng_t *prng);
 
 int generate_random_matrix_t(matrix_t_t t, prng_t *prng);

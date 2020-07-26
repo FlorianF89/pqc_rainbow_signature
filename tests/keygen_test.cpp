@@ -228,6 +228,7 @@ TEST(keygen, guassian_elimination_32x32_gf16_matrices) {
     printf("%f \n", (double) total / total_iterations);
 }
 
+
 TEST(keygen, multiply_32x32_gf16_matrices) {
 
     bitsliced_gf16_t a[32], a_times_b[32], identity[32];
@@ -260,3 +261,43 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
     }
     printf("matrix mul: %f \n", (double) total / total_iterations);
 }
+
+TEST(keygen, generate_private_key) {
+
+    private_key_t private_key;
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    clock_t t;
+    clock_t total = 0;
+    int total_iterations = 10;
+    for (j = 0; j < total_iterations; j++) {
+        t = clock();
+        generate_private_key(&private_key, &prng);
+        total += clock() - t;
+        uint64_t s_accumulator = 0;
+        uint64_t t_accumulator = 0;
+        uint64_t f_accumulator = 0;
+        for (i = 0; i < 32; i++) {
+            s_accumulator |= private_key.s[i + O1].c;
+            s_accumulator |= private_key.s[i + O1].x;
+            s_accumulator |= private_key.s[i + O1].y;
+            s_accumulator |= private_key.s[i + O1].y_x;
+            t_accumulator |= private_key.t[0][i + O1].c;
+            t_accumulator |= private_key.t[0][i + O1].x;
+            t_accumulator |= private_key.t[0][i + O1].y;
+            t_accumulator |= private_key.t[0][i + O1].y_x;
+            f_accumulator |= private_key.f[0][0][i + O1].c;
+            f_accumulator |= private_key.f[0][0][i + O1].x;
+            f_accumulator |= private_key.f[0][0][i + O1].y;
+            f_accumulator |= private_key.f[0][0][i + O1].y_x;
+        }
+        EXPECT_NE(s_accumulator, 0);
+        EXPECT_NE(t_accumulator, 0);
+        EXPECT_NE(f_accumulator, 0);
+    }
+    printf("private key gen: %f \n", (double) total / total_iterations);
+}
+
