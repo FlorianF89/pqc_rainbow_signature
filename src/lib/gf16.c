@@ -18,6 +18,21 @@ uint64_t gf16_is_zero(bitsliced_gf16_t a, unsigned int position) {
     return ret & 0x01u;
 }
 
+void copy_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source) {
+    destination->c = source->c;
+    destination->y = source->y;
+    destination->x = source->x;
+    destination->y_x = source->y_x;
+}
+
+void move_two_halves_gf16_into_one(bitsliced_gf16_t *destination, bitsliced_gf16_t *up_half,
+                                   bitsliced_gf16_t *low_half) {
+    destination->c = up_half->c | (low_half->c << 32u);
+    destination->c = up_half->y | (low_half->y << 32u);
+    destination->c = up_half->x | (low_half->x << 32u);
+    destination->c = up_half->y_x | (low_half->y_x << 32u);
+}
+
 
 void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsliced_gf16_t *b) {
     a_times_b->c = a->c ^ b->c;

@@ -254,9 +254,13 @@ int generate_random_32x32_gf16_matrix(bitsliced_gf16_t a[32], prng_t *prng) {
     }
     for (i = 0; i < 32; i++) {
         prng_gen(prng, (unsigned char *) &a[i].c, sizeof(uint32_t));
+        a[i].c &= 0xFFFFFFFFu;
         prng_gen(prng, (unsigned char *) &a[i].y, sizeof(uint32_t));
+        a[i].y &= 0xFFFFFFFFu;
         prng_gen(prng, (unsigned char *) &a[i].x, sizeof(uint32_t));
+        a[i].x &= 0xFFFFFFFFu;
         prng_gen(prng, (unsigned char *) &a[i].y_x, sizeof(uint32_t));
+        a[i].y_x &= 0xFFFFFFFFu;
     }
     return SUCCESS;
 }
@@ -282,139 +286,140 @@ int generate_random_32x32_gf16_upper_triangular_matrix(bitsliced_gf16_t a[32], p
     return SUCCESS;
 }
 
-int generate_random_matrix_s(matrix_s_t s, prng_t *prng) {
-    if (prng == NULL) {
+int generate_random_matrix_s(private_key_t *private_key, prng_t *prng) {
+
+//    memset(private_key->s_prime, 0, sizeof(private_key->s_prime));
+    if (generate_random_32x32_gf16_matrix(private_key->s_prime, prng) != SUCCESS) {
         return PRNG_FAILURE;
     }
-    memset(s, 0, sizeof(matrix_s_t));
+
+    memset(private_key->s, 0, sizeof(matrix_s_t));
+
     int i;
     uint64_t j = 1u;
-    for (i = 0; i < O1 + O2; i++) {
-        s[i].c = j;
+    for (i = 0; i < O1; i++) {
+        private_key->s[i].c = j;
         j <<= 1u;
     }
-
-    for (i = 0; i < O2; i++) {
-        prng_gen(prng, (unsigned char *) &s[O1 + i].c, O1 / 8);
-        prng_gen(prng, (unsigned char *) &s[O1 + i].y, O1 / 8);
-        prng_gen(prng, (unsigned char *) &s[O1 + i].x, O1 / 8);
-        prng_gen(prng, (unsigned char *) &s[O1 + i].y_x, O1 / 8);
+    for (i = O1; i < O1 + O2; i++) {
+        copy_gf16(&private_key->s[i], &private_key->s_prime[i - O1]);
+        private_key->s[i].c |= j;
+        j <<= 1u;
     }
-
-    gaussian_elimination_for_32x32_gf16_matrix(s);
     return SUCCESS;
 }
 
 
-int generate_random_matrix_t(matrix_t_t t, prng_t *prng) {
+int generate_random_matrix_t(private_key_t *private_key, prng_t *prng) {
 
-    if (prng == NULL) {
+    memset(private_key->t1, 0, sizeof(private_key->t1));
+    memset(private_key->t2, 0, sizeof(private_key->t2));
+    memset(private_key->t3, 0, sizeof(private_key->t3));
+    if (generate_random_32x32_gf16_matrix(private_key->t1, prng) != SUCCESS) {
         return PRNG_FAILURE;
     }
-    memset(t, 0, sizeof(matrix_t_t));
+    if (generate_random_32x32_gf16_matrix(private_key->t2, prng) != SUCCESS) {
+        return PRNG_FAILURE;
+    }
+    if (generate_random_32x32_gf16_matrix(private_key->t3, prng) != SUCCESS) {
+        return PRNG_FAILURE;
+    }
+
+    memset(private_key->t, 0, sizeof(matrix_t_t));
     int i;
     uint64_t j = 1u;
-    for (i = 0; i < V1 + O1; i++) {
-        t[0][i].c = j;
+    for (i = 0; i < V1; i++) {
+        private_key->t[0][i].c = j;
         j <<= 1u;
     }
+    for (i = V1; i < V1 + O1; i++) {
+        copy_gf16(&private_key->t[0][i], &private_key->t1[i - V1]);
+        private_key->t[0][i].c |= j;
+        j <<= 1u;
+    }
+
     j = 1u;
     for (i = V1 + O1; i < O1 + O2 + V1; i++) {
-        t[1][i].c = j;
+        move_two_halves_gf16_into_one(&private_key->t[0][i], &private_key->t2[i - V1 - O1],
+                                      &private_key->t3[i - V1 - O1]);
+        private_key->t[1][i].c = j;
         j <<= 1u;
     }
 
-    for (i = 0; i < O1; i++) {
-        prng_gen(prng, (unsigned char *) &t[0][V1 + i].c, O1 / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + i].y, O1 / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + i].x, O1 / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + i].y_x, O1 / 8);
-    }
-
-    for (i = 0; i < O2; i++) {
-        prng_gen(prng, (unsigned char *) &t[0][V1 + O1 + i].c, (V1 + O1) / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + O1 + i].y, (V1 + O1) / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + O1 + i].x, (V1 + O1) / 8);
-        prng_gen(prng, (unsigned char *) &t[0][V1 + O1 + i].y_x, (V1 + O1) / 8);
-    }
     return SUCCESS;
 }
 
-static int generate_random_matrices_f_i_for_i_in_v1_v2(matrix_fi_t f[O1], prng_t *prng) {
+static int generate_random_matrices_f_i_for_i_in_v1_v2(private_key_t *private_key, prng_t *prng) {
 
     uint64_t i, j;
+    int return_value = 0;
     for (i = 0; i < O1; i++) {
-        for (j = 0; j < O1 + O2; j++) {
-            prng_gen(prng, (unsigned char *) &f[i][0][j].c, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].x, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y_x, O1 / 8);
-        }
-        uint64_t mask = 0x01u;
+        return_value += generate_random_32x32_gf16_upper_triangular_matrix(private_key->f1s[i], prng);
         for (j = 0; j < O1; j++) {
-            f[i][0][j].c &= mask;
-            f[i][0][j].y &= mask;
-            f[i][0][j].x &= mask;
-            f[i][0][j].y_x &= mask;
-            mask = (mask << 1u) | 1u;
+            copy_gf16(&private_key->f[i][0][j], &private_key->f1s[i][j]);
+        }
+        return_value += generate_random_32x32_gf16_matrix(private_key->f2s[i], prng);
+        for (j = 0; j < O2; j++) {
+            copy_gf16(&private_key->f[i][0][j + O1], &private_key->f2s[i][j]);
         }
     }
-    uint64_t A[64];
-    for (i = 0; i < 64; i++) {
-        A[i] = f[0][0][i].c;
-    }
-    return SUCCESS;
+    return return_value;
 }
 
-static int generate_random_matrices_f_i_for_i_in_v2_n(matrix_fi_t f[O2], prng_t *prng) {
+static int generate_random_matrices_f_i_for_i_in_v2_n(private_key_t *private_key, prng_t *prng) {
 
     uint64_t i, j;
-    for (i = 0; i < O2; i++) {
-        for (j = 0; j < O1 + O2; j++) {
-            prng_gen(prng, (unsigned char *) &f[i][0][j].c, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].x, O1 / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y_x, O1 / 8);
+    int return_value = 0;
+    for (i = O1; i < O1 + O2; i++) {
+        return_value += generate_random_32x32_gf16_upper_triangular_matrix(private_key->f1s[i], prng);
+        for (j = 0; j < O1; j++) {
+            copy_gf16(&private_key->f[i][0][j], &private_key->f1s[i][j]);
         }
-        uint64_t mask = 0x01lu;
-        for (j = 0; j < O1 + O2; j++) {
-            f[i][0][j].c &= mask;
-            f[i][0][j].y &= mask;
-            f[i][0][j].x &= mask;
-            f[i][0][j].y_x &= mask;
-            mask = (mask << 1u) | 1u;
+        return_value += generate_random_32x32_gf16_matrix(private_key->f2s[i], prng);
+        return_value += generate_random_32x32_gf16_upper_triangular_matrix(private_key->f5s[i - O1], prng);
+        for (j = 0; j < O2; j++) {
+            move_two_halves_gf16_into_one(&private_key->f[i][0][j + O1], &private_key->f2s[i][j],
+                                          &private_key->f5s[i - O1][j]);
         }
-        for (j = O1 + O2; j < O1 + O2 + V1; j++) {
-            prng_gen(prng, (unsigned char *) &f[i][0][j].c, (O1 + O2) / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y, (O1 + O2) / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].x, (O1 + O2) / 8);
-            prng_gen(prng, (unsigned char *) &f[i][0][j].y_x, (O1 + O2) / 8);
+        return_value += generate_random_32x32_gf16_matrix(private_key->f3s[i - O1], prng);
+        return_value += generate_random_32x32_gf16_matrix(private_key->f6s[i - O1], prng);
+        for (j = 0; j < O2; j++) {
+            move_two_halves_gf16_into_one(&private_key->f[i][0][j + V1 + O1], &private_key->f3s[i - O1][j],
+                                          &private_key->f6s[i - O1][j]);
         }
     }
-    return SUCCESS;
+    return return_value;
 }
 
 
-int generate_random_matrices_f(matrix_fi_t f[O1 + O2], prng_t *prng) {
-    if (prng == NULL) {
-        return PRNG_FAILURE;
-    }
-    memset(f, 0, sizeof(matrix_fi_t) * (O1 + O2));
+int generate_random_matrices_f(private_key_t *private_key, prng_t *prng) {
+    memset(private_key->f, 0, sizeof(matrix_fi_t) * (O1 + O2));
 
-    generate_random_matrices_f_i_for_i_in_v1_v2(f, prng);
-    generate_random_matrices_f_i_for_i_in_v2_n(f + O1, prng);
+    int return_value = generate_random_matrices_f_i_for_i_in_v1_v2(private_key, prng);
+    return_value += generate_random_matrices_f_i_for_i_in_v2_n(private_key, prng);
 
-    return SUCCESS;
+    return return_value;
 }
 
 int generate_private_key(private_key_t *private_key, prng_t *prng) {
-    if (prng == NULL) {
+
+    int return_value = generate_random_matrix_s(private_key, prng);
+    return_value += generate_random_matrix_t(private_key, prng);
+    return_value += generate_random_matrices_f(private_key, prng);
+
+    if (return_value != SUCCESS) {
         return PRNG_FAILURE;
     }
 
-    generate_random_matrix_s(private_key->s, prng);
-    generate_random_matrix_t(private_key->t, prng);
-    generate_random_matrices_f(private_key->f, prng);
-
     return SUCCESS;
 }
+
+typedef struct public_key {
+    bitsliced_gf16_t mq[(N * (N + 1) / 2)];
+    bitsliced_gf16_t mp[(N * (N + 1) / 2)];
+} public_key_t;
+
+void derive_public_key_from_private_key() {
+
+}
+

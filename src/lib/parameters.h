@@ -11,6 +11,7 @@
 #define O2 32
 #define V1 32
 #define V2 (V1 + O1)
+#define N (O1 + O2 + V1)
 #define SECRET_KEY_SEED_BYTE_LENGTH 32
 
 #endif //PQC_RAINBOW_PARAMETERS_H
