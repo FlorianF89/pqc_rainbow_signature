@@ -15,9 +15,14 @@ typedef struct bitsliced_gf16 {
 uint64_t gf16_is_zero(bitsliced_gf16_t a, unsigned int position);
 
 void copy_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source);
+void shift_left_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source, uint8_t shift);
 
 void move_two_halves_gf16_into_one(bitsliced_gf16_t *destination, bitsliced_gf16_t *up_half,
                                    bitsliced_gf16_t *low_half);
+
+void extract_one_gf16_element_and_place_it_in_given_position(bitsliced_gf16_t *destination,
+                                                             uint8_t destination_position, bitsliced_gf16_t *in,
+                                                             uint8_t in_position);
 
 int bitsliced_gf16_is_one(bitsliced_gf16_t in);
 

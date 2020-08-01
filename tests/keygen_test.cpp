@@ -112,9 +112,11 @@ TEST(keygen, generate_random_matrices_f) {
             EXPECT_EQ(private_key.f[i][1][j].x, 0);
             EXPECT_EQ(private_key.f[i][1][j].y_x, 0);
             accumulator_1 |=
-                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x | private_key.f[i][0][j].y_x;
+                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x |
+                    private_key.f[i][0][j].y_x;
             accumulator_2 |=
-                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x | private_key.f[i][1][j].y_x;
+                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x |
+                    private_key.f[i][1][j].y_x;
         }
         for (j = O1; j < O1 + O2; j++) {
             EXPECT_EQ(private_key.f[i][0][j].c & ~test_value, 0);
@@ -126,9 +128,11 @@ TEST(keygen, generate_random_matrices_f) {
             EXPECT_EQ(private_key.f[i][1][j].x, 0);
             EXPECT_EQ(private_key.f[i][1][j].y_x, 0);
             accumulator_1 |=
-                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x | private_key.f[i][0][j].y_x;
+                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x |
+                    private_key.f[i][0][j].y_x;
             accumulator_2 |=
-                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x | private_key.f[i][1][j].y_x;
+                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x |
+                    private_key.f[i][1][j].y_x;
         }
         for (j = O1 + O2; j < O1 + O2 + V1; j++) {
             EXPECT_EQ(private_key.f[i][0][j].c, 0);
@@ -140,9 +144,11 @@ TEST(keygen, generate_random_matrices_f) {
             EXPECT_EQ(private_key.f[i][1][j].x, 0);
             EXPECT_EQ(private_key.f[i][1][j].y_x, 0);
             accumulator_1 |=
-                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x | private_key.f[i][0][j].y_x;
+                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x |
+                    private_key.f[i][0][j].y_x;
             accumulator_2 |=
-                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x | private_key.f[i][1][j].y_x;
+                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x |
+                    private_key.f[i][1][j].y_x;
         }
     }
     EXPECT_NE(accumulator_1, 0);
@@ -161,9 +167,11 @@ TEST(keygen, generate_random_matrices_f) {
             EXPECT_EQ(private_key.f[i][1][j].x, 0);
             EXPECT_EQ(private_key.f[i][1][j].y_x, 0);
             accumulator_1 |=
-                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x | private_key.f[i][0][j].y_x;
+                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x |
+                    private_key.f[i][0][j].y_x;
             accumulator_2 |=
-                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x | private_key.f[i][1][j].y_x;
+                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x |
+                    private_key.f[i][1][j].y_x;
         }
         for (j = O1 + O2; j < O1 + O2 + V1; j++) {
             EXPECT_EQ(private_key.f[i][1][j].c, 0);
@@ -171,9 +179,11 @@ TEST(keygen, generate_random_matrices_f) {
             EXPECT_EQ(private_key.f[i][1][j].x, 0);
             EXPECT_EQ(private_key.f[i][1][j].y_x, 0);
             accumulator_1 |=
-                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x | private_key.f[i][0][j].y_x;
+                    private_key.f[i][0][j].c | private_key.f[i][0][j].y | private_key.f[i][0][j].x |
+                    private_key.f[i][0][j].y_x;
             accumulator_2 |=
-                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x | private_key.f[i][1][j].y_x;
+                    private_key.f[i][1][j].c | private_key.f[i][1][j].y | private_key.f[i][1][j].x |
+                    private_key.f[i][1][j].y_x;
         }
     }
     EXPECT_NE(accumulator_1, 0);
@@ -282,7 +292,7 @@ TEST(keygen, generate_private_key) {
     int i, j;
     clock_t t;
     clock_t total = 0;
-    int total_iterations = 10;
+    int total_iterations = 1;
     for (j = 0; j < total_iterations; j++) {
         t = clock();
         generate_private_key(&private_key, &prng);
@@ -309,5 +319,42 @@ TEST(keygen, generate_private_key) {
         EXPECT_NE(f_accumulator, 0);
     }
     printf("private key gen: %f \n", (double) total / total_iterations);
+}
+
+TEST(keygen, derive_public_key_from_private_key) {
+
+    private_key_t private_key;
+    memset(&private_key, 0x00, sizeof(private_key));
+    public_key_t public_key;
+    memset(&public_key, 0x00, sizeof(public_key));
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    clock_t t;
+    clock_t total = 0;
+    int total_iterations = 1;
+    for (j = 0; j < total_iterations; j++) {
+        t = clock();
+        generate_private_key(&private_key, &prng);
+        derive_public_key_from_private_key(&public_key, &private_key);
+        total += clock() - t;
+        uint64_t mq_accumulator = 0;
+        uint64_t mp_accumulator = 0;
+        for (i = 0; i < (N * (N + 1) / 2); i++) {
+            mq_accumulator |= public_key.mq[i].c;
+            mp_accumulator |= public_key.mp[i].c;
+            mq_accumulator |= public_key.mq[i].y;
+            mp_accumulator |= public_key.mp[i].y;
+            mq_accumulator |= public_key.mq[i].x;
+            mp_accumulator |= public_key.mp[i].x;
+            mq_accumulator |= public_key.mq[i].y_x;
+            mp_accumulator |= public_key.mp[i].y_x;
+        }
+        EXPECT_NE(mq_accumulator, 0);
+        EXPECT_NE(mp_accumulator, 0);
+    }
+    printf("public key gen: %f \n", (double) total / total_iterations);
 }
 

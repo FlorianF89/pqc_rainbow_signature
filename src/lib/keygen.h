@@ -29,6 +29,12 @@ typedef struct private_key {
     gf16_32x32_matrix f6s[N - V2];
 } private_key_t;
 
+
+typedef struct public_key {
+    bitsliced_gf16_t mq[(N * (N + 1) / 2)];
+    bitsliced_gf16_t mp[(N * (N + 1) / 2)];
+} public_key_t;
+
 int generate_private_key(private_key_t *private_key, prng_t *prng);
 
 int generate_random_matrix_s(private_key_t *private_key, prng_t *prng);
@@ -44,5 +50,7 @@ void gaussian_elimination_for_32x32_gf16_matrix(matrix_s_t s);
 void set_32x32_gf16_matrix_to_identity(bitsliced_gf16_t a[32]);
 
 void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]);
+
+void derive_public_key_from_private_key(public_key_t *public_key, private_key_t *private_key);
 
 #endif //PQC_RAINBOW_KEYGEN_H

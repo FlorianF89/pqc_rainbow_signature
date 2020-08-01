@@ -212,9 +212,9 @@ static uint32_t parity_of_32_bit_words(uint32_t in) {
     return (0x6996u >> in) & 1u;
 }
 
-static void bitsliced_gf_16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
-                                                                                     bitsliced_gf16_t *in,
-                                                                                     uint32_t position_to_place) {
+static void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
+                                                                                    bitsliced_gf16_t *in,
+                                                                                    uint32_t position_to_place) {
 
     out->c = (parity_of_32_bit_words(in->c)) << position_to_place;
     out->y = (parity_of_32_bit_words(in->y)) << position_to_place;
@@ -241,9 +241,17 @@ void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16
     for (i = 0; i < 32; i++) {
         for (j = 0; j < 32; j++) {
             bitsliced_multiplication(&tmp, &a_transposed[i], &b[j]);
-            bitsliced_gf_16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
+            bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
             bitsliced_addition(&a_times_b[j], &a_times_b[j], &tmp);
         }
+    }
+}
+
+void add_32x32_gf16_matrices(bitsliced_gf16_t a_plus_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]) {
+
+    uint32_t i;
+    for (i = 0; i < 32; i++) {
+        bitsliced_addition(&a_plus_b[i], &a[i], &b[i]);
     }
 }
 
@@ -414,12 +422,203 @@ int generate_private_key(private_key_t *private_key, prng_t *prng) {
     return SUCCESS;
 }
 
-typedef struct public_key {
-    bitsliced_gf16_t mq[(N * (N + 1) / 2)];
-    bitsliced_gf16_t mp[(N * (N + 1) / 2)];
-} public_key_t;
+void derive_public_key_from_private_key(public_key_t *public_key, private_key_t *private_key) {
 
-void derive_public_key_from_private_key() {
+    bitsliced_gf16_t tmp[32];
+    bitsliced_gf16_t tmp2[32];
+    bitsliced_gf16_t tmp3[32];
+    bitsliced_gf16_t tmp4[32];
+    bitsliced_gf16_t tmp_single_element;
+    bitsliced_gf16_t q2[32];
+    bitsliced_gf16_t q3[32];
+    bitsliced_gf16_t q5[32];
+    bitsliced_gf16_t q6[32];
+    bitsliced_gf16_t q9[32];
+    bitsliced_gf16_t t1_transpose[32];
+    bitsliced_gf16_t t2_transpose[32];
+    bitsliced_gf16_t t3_transpose[32];
 
+    transpose_32x32_gf16_matrix(t1_transpose, private_key->t1);
+    transpose_32x32_gf16_matrix(t2_transpose, private_key->t2);
+    transpose_32x32_gf16_matrix(t3_transpose, private_key->t3);
+    memset(public_key->mp, 0x00, sizeof(public_key->mp));
+    memset(public_key->mq, 0x00, sizeof(public_key->mq));
+
+    uint64_t i, j, k;
+    uint32_t offset;
+    for (i = 0; i < O1; i++) {
+        offset = 0;
+        //Q2 = (F1 + F1^T).T1 + F2
+        //tmp = F1 + F1^T
+        transpose_and_add_32x32_gf16_matrices(tmp, private_key->f1s[i], private_key->f1s[i]);
+        multiply_32x32_gf16_matrices(q2, tmp, private_key->t1);
+        add_32x32_gf16_matrices(q2, q2, private_key->f2s[i]);
+        //fills the ith row of MQ with the elements of Q1||Q2
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i,
+                                                                        &private_key->f1s[i][k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+            for (k = 0; k < O2; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q2[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //Q3 = (F1 +F1^T)·T2 + F2 ·T3
+        //tmp2 = F2.T3
+        multiply_32x32_gf16_matrices(q3, tmp, private_key->t2);
+        multiply_32x32_gf16_matrices(tmp2, private_key->f2s[i], private_key->t3);
+        add_32x32_gf16_matrices(q3, q3, tmp2);
+        //fills the ith row of MQ with the elements of Q3
+        for (j = 0; j < O1; j++) {
+            for (k = 0; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q3[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //Q9 = UT(T2^T ·F1 ·T2 +T2^T ·F2 ·T3 )
+        multiply_32x32_gf16_matrices(tmp3, private_key->f1s[i], private_key->t2);
+        multiply_32x32_gf16_matrices(q9, t2_transpose, tmp3);
+        multiply_32x32_gf16_matrices(tmp3, t2_transpose, tmp2);
+        add_32x32_gf16_matrices(q9, q9, tmp3);
+        gaussian_elimination_for_32x32_gf16_matrix(q9);
+        //Q6 = T1^T(F1 +F1^T)·T2 +T1^T ·F2 ·T3 +F2^T ·T2
+        add_32x32_gf16_matrices(tmp3, tmp, tmp2);
+        multiply_32x32_gf16_matrices(q6, t1_transpose, tmp3);
+        transpose_32x32_gf16_matrix(tmp3, private_key->f2s[i]);
+        multiply_32x32_gf16_matrices(tmp2, tmp3, private_key->t2);
+        add_32x32_gf16_matrices(q6, q6, tmp2);
+        //Q5 = UT(T1^T · F1 · T1 + T1^T ·F2)
+        multiply_32x32_gf16_matrices(tmp, private_key->f1s[i], private_key->t1);
+        add_32x32_gf16_matrices(tmp, tmp, private_key->f2s[i]);
+        multiply_32x32_gf16_matrices(q5, t1_transpose, tmp);
+        gaussian_elimination_for_32x32_gf16_matrix(q5);
+
+        //fills the ith row of MQ with the elements of Q5||Q6
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q5[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+            for (k = 0; k < O2; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q6[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //fills the ith row of MQ with the elements of Q9
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q9[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+    }
+    for (i = O1; i < O1 + O2; i++) {
+        offset = 0;
+        //Q2 = (F1 + F1^T).T1 + F2
+        //tmp = F1 + F1^T
+        transpose_and_add_32x32_gf16_matrices(tmp, private_key->f1s[i], private_key->f1s[i]);
+        multiply_32x32_gf16_matrices(q2, tmp, private_key->t1);
+        add_32x32_gf16_matrices(q2, q2, private_key->f2s[i]);
+        //fills the ith row of MQ with the elements of Q1||Q2
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i,
+                                                                        &private_key->f1s[i][k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+            for (k = 0; k < O2; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q2[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //Q3 = (F1 +F1^T)·T2 + F2 ·T3 + F3
+        //tmp2 = F2.T3
+        multiply_32x32_gf16_matrices(q3, tmp, private_key->t2);
+        multiply_32x32_gf16_matrices(tmp2, private_key->f2s[i], private_key->t3);
+        add_32x32_gf16_matrices(q3, q3, tmp2);
+        add_32x32_gf16_matrices(q3, q3, private_key->f3s[i - O1]);
+        //fills the ith row of MQ with the elements of Q3
+        for (j = 0; j < O1; j++) {
+            for (k = 0; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q3[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //Q9 = UT(T2^T ·F1 ·T2 +T2^T ·F2 ·T3 + T3^T . F5 . T3 + T2^T . F3 + T3^T . F6)
+        multiply_32x32_gf16_matrices(tmp3, private_key->f1s[i], private_key->t2); //tmp3 = F1 T2
+        multiply_32x32_gf16_matrices(q9, t2_transpose, tmp3); //q9 = T2^T . F1. T2
+        multiply_32x32_gf16_matrices(tmp3, t2_transpose, tmp2); // tmp3 = T2^T F3 T2
+        add_32x32_gf16_matrices(q9, q9, tmp3); //q9 = T2^T . F1. T2 + T2^T F3 T2
+        multiply_32x32_gf16_matrices(tmp3, private_key->f5s[i - O1], private_key->t3); // tmp3 = F5 T3
+        multiply_32x32_gf16_matrices(tmp4, t3_transpose, tmp3); //tmp4 = T3^t F5 T3
+        add_32x32_gf16_matrices(q9, q9, tmp4); // q9 = T2^T ·F1 ·T2 +T2^T ·F2 ·T3 + T3^T . F5 . T3
+        multiply_32x32_gf16_matrices(tmp3, t2_transpose, private_key->f3s[i - O1]); //tmp3 = T2^T F3
+        add_32x32_gf16_matrices(q9, q9, tmp3); // q9 = T2^T ·F1 ·T2 +T2^T ·F2 ·T3 + T3^T . F5 . T3 + T2^T F3
+        multiply_32x32_gf16_matrices(tmp3, t3_transpose, private_key->f6s[i - O1]); //tmp3 = T3^T F6
+        add_32x32_gf16_matrices(q9, q9, tmp3); // q9 = T2^T ·F1 ·T2 +T2^T ·F2 ·T3 + T3^T . F5 . T3 + T2^T F3 + T3^T . F6
+        gaussian_elimination_for_32x32_gf16_matrix(q9);
+
+        //Q6 = T1^T(F1 +F1^T)·T2 +T1^T ·F2 ·T3 +F2^T ·T2 + T1^T F3 + (F5 + F5^T) . T3 + F6
+        add_32x32_gf16_matrices(tmp3, tmp, tmp2);
+        multiply_32x32_gf16_matrices(q6, t1_transpose, tmp3);
+        transpose_32x32_gf16_matrix(tmp3, private_key->f2s[i]);
+        multiply_32x32_gf16_matrices(tmp2, tmp3, private_key->t2);
+        add_32x32_gf16_matrices(q6, q6, tmp2);
+        multiply_32x32_gf16_matrices(tmp3, t1_transpose, private_key->f3s[i - O1]);
+        add_32x32_gf16_matrices(q6, q6, tmp3);
+        transpose_and_add_32x32_gf16_matrices(tmp3, private_key->f5s[i - O1], private_key->f5s[i - O1]);
+        multiply_32x32_gf16_matrices(tmp4, tmp3, private_key->t3);
+        add_32x32_gf16_matrices(q6, q6, tmp4);
+        add_32x32_gf16_matrices(q6, q6, private_key->f6s[i - O1]);
+
+        //Q5 = UT(T1^T · F1 · T1 + T1^T ·F2 + F5)
+        multiply_32x32_gf16_matrices(tmp, private_key->f1s[i], private_key->t1);
+        add_32x32_gf16_matrices(tmp, tmp, private_key->f2s[i]);
+        multiply_32x32_gf16_matrices(q5, t1_transpose, tmp);
+        add_32x32_gf16_matrices(q5, q5, private_key->f5s[i - O1]);
+        gaussian_elimination_for_32x32_gf16_matrix(q5);
+
+        //fills the ith row of MQ with the elements of Q5||Q6
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q5[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+            for (k = 0; k < O2; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q6[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+        //fills the ith row of MQ with the elements of Q9
+        for (j = 0; j < O1; j++) {
+            for (k = j; k < O1; k++) {
+                extract_one_gf16_element_and_place_it_in_given_position(&tmp_single_element, i, &q9[k], j);
+                bitsliced_addition(&public_key->mq[offset], &public_key->mq[offset], &tmp_single_element);
+                offset++;
+            }
+        }
+    }
+    memcpy(public_key->mp, public_key->mq, sizeof(public_key->mq));
+    for (i = 0; i < N * (N + 1) / 64; i += 32) {
+        for (j = 0; j < 32; j++) {
+            copy_gf16(&tmp[j], &public_key->mq[i + j]);
+            shift_left_gf16(&tmp[j], &tmp[j], 32);
+        }
+        multiply_32x32_gf16_matrices(tmp2, private_key->s_prime, tmp);
+        add_32x32_gf16_matrices(&public_key->mp[i], &public_key->mp[i], tmp2);
+    }
 }
 

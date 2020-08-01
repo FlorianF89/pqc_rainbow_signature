@@ -41,6 +41,22 @@ void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsli
     a_times_b->y_x = a->y_x ^ b->y_x;
 }
 
+void shift_left_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source, uint8_t shift) {
+    destination->c = source->c << shift;
+    destination->y = source->y << shift;
+    destination->x = source->x << shift;
+    destination->y_x = source->y_x << shift;
+}
+
+void extract_one_gf16_element_and_place_it_in_given_position(bitsliced_gf16_t *destination,
+                                                             uint8_t destination_position, bitsliced_gf16_t *in,
+                                                             uint8_t in_position) {
+    destination->c = ((in->c >> in_position) & 0x01u) << destination_position;
+    destination->y = ((in->y >> in_position) & 0x01u) << destination_position;
+    destination->x = ((in->x >> in_position) & 0x01u) << destination_position;
+    destination->y_x = ((in->y_x >> in_position) & 0x01u) << destination_position;
+}
+
 void bitsliced_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b) {
     a_times_b->c = (a->c & b->c);
     a_times_b->y = (a->c & b->y) ^ (a->y & b->c);
