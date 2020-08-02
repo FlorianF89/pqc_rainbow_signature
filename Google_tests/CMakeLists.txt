@@ -15,5 +15,5 @@ add_executable(Google_Tests_run ../tests/gf16-test.cc
         ../src/lib/rng.c
         ../src/lib/utils_hash.c
         ../src/lib/utils_prng.c
-        ../tests/keygen_test.cpp)
+        ../tests/keygen_test.cpp ../src/lib/sign.c ../src/lib/sign.h ../tests/sign_test.cpp)
 target_link_libraries(Google_Tests_run gtest gtest_main OpenSSL::Crypto)

@@ -204,7 +204,7 @@ void transpose_and_add_32x32_gf16_matrices(matrix_s_t s1_plus_s2t, matrix_s_t s1
     }
 }
 
-static uint32_t parity_of_32_bit_words(uint32_t in) {
+uint32_t parity_of_32_bit_words(uint32_t in) {
     in ^= in >> 16u;
     in ^= in >> 8u;
     in ^= in >> 4u;
@@ -212,9 +212,9 @@ static uint32_t parity_of_32_bit_words(uint32_t in) {
     return (0x6996u >> in) & 1u;
 }
 
-static void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
-                                                                                    bitsliced_gf16_t *in,
-                                                                                    uint32_t position_to_place) {
+void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
+                                                                             bitsliced_gf16_t *in,
+                                                                             uint32_t position_to_place) {
 
     out->c = (parity_of_32_bit_words(in->c)) << position_to_place;
     out->y = (parity_of_32_bit_words(in->y)) << position_to_place;

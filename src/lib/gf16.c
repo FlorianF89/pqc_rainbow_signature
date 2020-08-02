@@ -14,8 +14,9 @@ int bitsliced_gf16_is_one(bitsliced_gf16_t in) {
 
 uint64_t gf16_is_zero(bitsliced_gf16_t a, unsigned int position) {
 
-    uint64_t ret = (a.c >> position) | (a.y >> position) | (a.x >> position) | (a.y_x >> position);
-    return ret & 0x01u;
+    uint64_t ret = ((a.c >> position) & 0x01u) | ((a.y >> position) & 0x01u) | ((a.x >> position) & 0x01u) |
+                   ((a.y_x >> position) & 0x01u);
+    return ret == 0;
 }
 
 void copy_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source) {
