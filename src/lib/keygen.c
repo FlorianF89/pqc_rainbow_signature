@@ -212,6 +212,15 @@ uint32_t parity_of_32_bit_words(uint32_t in) {
     return (0x6996u >> in) & 1u;
 }
 
+uint64_t parity_of_64_bit_words(uint64_t in) {
+    in ^= in >> 32u;
+    in ^= in >> 16u;
+    in ^= in >> 8u;
+    in ^= in >> 4u;
+    in &= 0xfu;
+    return (0x6996u >> in) & 1u;
+}
+
 void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
                                                                              bitsliced_gf16_t *in,
                                                                              uint32_t position_to_place) {
@@ -220,6 +229,17 @@ void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bit
     out->y = (parity_of_32_bit_words(in->y)) << position_to_place;
     out->x = (parity_of_32_bit_words(in->x)) << position_to_place;
     out->y_x = (parity_of_32_bit_words(in->y_x)) << position_to_place;
+
+}
+
+void bitsliced_gf16_sum_64_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
+                                                                             bitsliced_gf16_t *in,
+                                                                             uint32_t position_to_place) {
+
+    out->c = (parity_of_64_bit_words(in->c)) << position_to_place;
+    out->y = (parity_of_64_bit_words(in->y)) << position_to_place;
+    out->x = (parity_of_64_bit_words(in->x)) << position_to_place;
+    out->y_x = (parity_of_64_bit_words(in->y_x)) << position_to_place;
 
 }
 

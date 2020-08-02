@@ -53,6 +53,10 @@ void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bit
                                                                              bitsliced_gf16_t *in,
                                                                              uint32_t position_to_place);
 
+void bitsliced_gf16_sum_64_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
+                                                                             bitsliced_gf16_t *in,
+                                                                             uint32_t position_to_place);
+
 uint32_t parity_of_32_bit_words(uint32_t in);
 
 void transpose_and_add_32x32_gf16_matrices(matrix_s_t s1_plus_s2t, matrix_s_t s1, matrix_s_t s2);

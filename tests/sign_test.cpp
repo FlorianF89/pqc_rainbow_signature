@@ -80,7 +80,7 @@ TEST(sign_tests, evaluate_32_quadratic_polynomials_at_x0_x31) {
 TEST(sign_tests, evaluate_32_quadratic_polynomials_at_x0_x63) {
     bitsliced_gf16_t x0_x31, evaluation;
     memset(&evaluation, 0xFF, sizeof(bitsliced_gf16_t));
-    x0_x31.c = 0xFFFFFFFFlu;
+    x0_x31.c = 0xFFFFFFFFFFFFFFFFlu;
     x0_x31.y = 0;
     x0_x31.x = 0;
     x0_x31.y_x = 0;
