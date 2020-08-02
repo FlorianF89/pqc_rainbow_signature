@@ -45,6 +45,8 @@ int generate_random_matrices_f(private_key_t *private_key, prng_t *prng);
 
 int generate_random_32x32_gf16_upper_triangular_matrix(bitsliced_gf16_t a[32], prng_t *prng);
 
+int generate_random_32x32_gf16_matrix(bitsliced_gf16_t a[32], prng_t *prng);
+
 void transpose_32x32_gf16_matrix(bitsliced_gf16_t out[32], bitsliced_gf16_t in[32]);
 
 void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,

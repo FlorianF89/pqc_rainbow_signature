@@ -69,9 +69,64 @@ TEST(sign_tests, evaluate_32_quadratic_polynomials_at_x0_x31) {
         for (j = 1; j < 32; j++) {
             bitsliced_addition(&tmp, &tmp, &f[i][j]);
         }
-        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&accumulator, &tmp, i);
+        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
+        bitsliced_addition(&accumulator, &tmp, &accumulator);
     }
     evaluate_32_quadratic_polynomials_at_x0_x31(&evaluation, f, &x0_x31);
     bitsliced_addition(&evaluation, &evaluation, &accumulator);
     EXPECT_EQ(gf16_is_zero(evaluation, 0), 1);
 }
+
+TEST(sign_tests, evaluate_32_quadratic_polynomials_at_x0_x63) {
+    bitsliced_gf16_t x0_x31, evaluation;
+    memset(&evaluation, 0xFF, sizeof(bitsliced_gf16_t));
+    x0_x31.c = 0xFFFFFFFFlu;
+    x0_x31.y = 0;
+    x0_x31.x = 0;
+    x0_x31.y_x = 0;
+
+    bitsliced_gf16_t f[32][64];
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    int return_value = 0;
+    for (i = 0; i < 32; i++) {
+        return_value += generate_random_32x32_gf16_upper_triangular_matrix(f[i], &prng);
+        return_value += generate_random_32x32_gf16_matrix(&f[i][32], &prng);
+    }
+    ASSERT_EQ(return_value, SUCCESS);
+    bitsliced_gf16_t accumulator;
+    memset(&accumulator, 0x00, sizeof(bitsliced_gf16_t));
+    for (i = 0; i < 32; i++) {
+        bitsliced_gf16_t tmp = f[i][0];
+        for (j = 1; j < 64; j++) {
+            bitsliced_addition(&tmp, &tmp, &f[i][j]);
+        }
+        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
+        bitsliced_addition(&accumulator, &tmp, &accumulator);
+    }
+    evaluate_32_quadratic_polynomials_at_x0_x63(&evaluation, f, &x0_x31);
+    bitsliced_addition(&evaluation, &evaluation, &accumulator);
+    EXPECT_EQ(gf16_is_zero(evaluation, 0), 1);
+}
+
+TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
+    bitsliced_gf16_t x0_x31, y0_y63;
+    bitsliced_gf16_t f[64][32];
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_gen(&prng, (uint8_t *) &x0_x31, sizeof(bitsliced_gf16_t));
+    x0_x31.c &= 0xFFFFFFFFlu;
+    x0_x31.y &= 0xFFFFFFFFlu;
+    x0_x31.x &= 0xFFFFFFFFlu;
+    x0_x31.y_x &= 0xFFFFFFFFlu;
+
+
+    EXPECT_EQ(gf16_is_zero(x0_x31, 0), 1);
+}
+
