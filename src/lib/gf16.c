@@ -49,6 +49,13 @@ void shift_left_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source, ui
     destination->y_x = source->y_x << shift;
 }
 
+void shift_right_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source, uint8_t shift) {
+    destination->c = source->c >> shift;
+    destination->y = source->y >> shift;
+    destination->x = source->x >> shift;
+    destination->y_x = source->y_x >> shift;
+}
+
 void extract_one_gf16_element_and_place_it_in_given_position(bitsliced_gf16_t *destination,
                                                              uint8_t destination_position, bitsliced_gf16_t *in,
                                                              uint8_t in_position) {

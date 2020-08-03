@@ -172,7 +172,7 @@ void gaussian_elimination_for_32x32_gf16_matrix(matrix_s_t s) {
         bitsliced_gf16_t tmp1;
         bitsliced_inversion(&tmp1, &tmp);
         bitsliced_multiplication(&tmp, &tmp1, &s[i]);
-        for (unsigned int j = i + 1u; j < 32; ++j) {
+        for (unsigned int j = i + 1; j < 32; ++j) {
             bitsliced_gf16_t tmp2 = extract_then_expand(s[j], i, i + 1);
             bitsliced_multiplication(&tmp1, &tmp, &tmp2);
             bitsliced_addition(&s[j], &tmp1, &s[j]);
