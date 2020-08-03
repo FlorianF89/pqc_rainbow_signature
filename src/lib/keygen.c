@@ -157,7 +157,7 @@ void transpose_32x32_gf16_matrix(bitsliced_gf16_t out[32], bitsliced_gf16_t in[3
     }
 }
 
-static bitsliced_gf16_t extract_then_expand(bitsliced_gf16_t a, unsigned int position, unsigned int shift) {
+bitsliced_gf16_t extract_then_expand(bitsliced_gf16_t a, unsigned int position, unsigned int shift) {
     bitsliced_gf16_t ret;
     ret.c = ((a.c >> position) & 0x01u) * (0xFFFFFFFFFFFFFFFF << shift);
     ret.x = ((a.x >> position) & 0x01u) * (0xFFFFFFFFFFFFFFFF << shift);

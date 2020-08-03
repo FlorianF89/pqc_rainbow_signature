@@ -76,7 +76,26 @@ void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, b
     }
 }
 
-void find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(bitsliced_gf16_t *preimage, bitsliced_gf16_t f[32][32],
+void solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equations_coefficients[32],
+                             bitsliced_gf16_t *linear_coefficients) {
+    for (unsigned int i = 0; i < 31; i++) {
+        bitsliced_gf16_t tmp = extract_then_expand(equations_coefficients[i], i, i);
+        bitsliced_gf16_t tmp1;
+        bitsliced_inversion(&tmp1, &tmp);
+        bitsliced_multiplication(&tmp, &tmp1, &equations_coefficients[i]);
+        for (unsigned int j = i + 1u; j < 32; ++j) {
+            bitsliced_gf16_t tmp2 = extract_then_expand(equations_coefficients[j], i, i + 1);
+            bitsliced_multiplication(&tmp1, &tmp, &tmp2);
+            bitsliced_addition(&equations_coefficients[j], &tmp1, &equations_coefficients[j]);
+        }
+        equations_coefficients[i].c &= (1u << (i + 1u)) - 1u;
+        equations_coefficients[i].y &= (1u << (i + 1u)) - 1u;
+        equations_coefficients[i].x &= (1u << (i + 1u)) - 1u;
+        equations_coefficients[i].y_x &= (1u << (i + 1u)) - 1u;
+    }
+}
+
+void find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(bitsliced_gf16_t *preimage, bitsliced_gf16_t f[32][64],
                                                                bitsliced_gf16_t *x0_x31) {
 
 }
