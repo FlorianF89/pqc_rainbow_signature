@@ -642,3 +642,87 @@ void derive_public_key_from_private_key(public_key_t *public_key, private_key_t 
     }
 }
 
+static inline int determine_position_of_x_i_times_x_j_in_mq_polynomial(unsigned int i, unsigned int j) {
+    if (i < j) {
+        return i * N - ((i + 1) * i / 2) + j;
+    } else {
+        return j * N - ((j + 1) * j / 2) + i;
+    }
+}
+
+void replace_variable_by_linear_combination_in_quadratic_polynomial(bitsliced_quadratic_polynomials_t *modified_f,
+                                                                    bitsliced_quadratic_polynomials_t *original_f,
+                                                                    int variable_index,
+                                                                    bitsliced_gf16_t *linear_combination) {
+
+    memcpy(modified_f, original_f, sizeof(bitsliced_quadratic_polynomials_t));
+    unsigned int i;
+    int linear_combination_length, offset;
+    bitsliced_gf16_t linear_coefficients[64];
+    if (variable_index < 32) {
+        for (i = 0; i < 64; i++) {
+            linear_coefficients[i].c = ((linear_combination->c >> i) & 0x01u) * (-1);
+            linear_coefficients[i].y = ((linear_combination->y >> i) & 0x01u) * (-1);
+            linear_coefficients[i].x = ((linear_combination->x >> i) & 0x01u) * (-1);
+            linear_coefficients[i].y_x = ((linear_combination->y_x >> i) & 0x01u) * (-1);
+        }
+        linear_combination_length = 64;
+        offset = N - 64;
+    } else if (variable_index < 64) {
+        for (i = 0; i < 32; i++) {
+            linear_coefficients[i].c = ((linear_combination->c >> i) & 0x01u) * (-1);
+            linear_coefficients[i].y = ((linear_combination->y >> i) & 0x01u) * (-1);
+            linear_coefficients[i].x = ((linear_combination->x >> i) & 0x01u) * (-1);
+            linear_coefficients[i].y_x = ((linear_combination->y_x >> i) & 0x01u) * (-1);
+        }
+        linear_combination_length = 32;
+        offset = N - 32;
+    } else {
+        return;
+    }
+
+    i = 0;
+    int left_to_replace = N;
+    bitsliced_gf16_t tmp, tmp1;
+    unsigned int k;
+    while (i < variable_index) {
+        for (k = 0; k < linear_combination_length; k++) {
+            bitsliced_multiplication(&tmp, &linear_coefficients[k],
+                                     &original_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i,
+                                                                                                                    variable_index)]);
+            bitsliced_addition(
+                    &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i,
+                                                                                                   k + offset)],
+                    &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i,
+                                                                                                   k + offset)],
+                    &tmp);
+        }
+        i++;
+        left_to_replace--;
+    }
+    for (k = 0; k < linear_combination_length; k++) {
+        bitsliced_square(&tmp, &linear_coefficients[k]);
+        bitsliced_multiplication(&tmp1, &tmp,
+                                 &original_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i, i)]);
+        bitsliced_addition(
+                &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(k + offset, k + offset)],
+                &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(k + offset, k + offset)],
+                &tmp);
+    }
+    left_to_replace--;
+    i++;
+    while (left_to_replace != 0) {
+        for (k = 0; k < linear_combination_length; k++) {
+            bitsliced_multiplication(&tmp, &linear_coefficients[k],
+                                     &original_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i,
+                                                                                                                    variable_index)]);
+            bitsliced_addition(
+                    &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i, k + offset)],
+                    &modified_f->coefficients[determine_position_of_x_i_times_x_j_in_mq_polynomial(i, k + offset)],
+                    &tmp);
+        }
+        i++;
+        left_to_replace--;
+    }
+}
+

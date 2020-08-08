@@ -5,6 +5,7 @@
 
 #include "gtest/gtest.h"
 #include "../src/lib/error_codes.h"
+#include <x86intrin.h>
 
 
 extern "C" {
@@ -126,9 +127,11 @@ TEST(sign_tests, solve_32x32_gf16_system) {
     memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
-    prng_gen(&prng, (uint8_t *) &linear_coefficients, sizeof(bitsliced_gf16_t));
+    clock_t t, total = 0;
+    int iterations = 0;
     while (has_solution == 0) {
 
+        prng_gen(&prng, (uint8_t *) &linear_coefficients, sizeof(bitsliced_gf16_t));
         linear_coefficients.c &= 0xFFFFFFFFlu;
         linear_coefficients.y &= 0xFFFFFFFFlu;
         linear_coefficients.x &= 0xFFFFFFFFlu;
@@ -139,9 +142,12 @@ TEST(sign_tests, solve_32x32_gf16_system) {
             return_value += generate_random_32x32_gf16_matrix(f, &prng);
         }
         memcpy(f_copy, f, sizeof(f));
+        t = clock();
         has_solution = solve_32x32_gf16_system(&solution, f, &linear_coefficients);
+        total += clock() - t;
+        iterations++;
     }
-
+    printf("solve: %lucc\n", total / iterations);
     bitsliced_gf16_t g[32], verif[32];
     for (i = 0; i < 32; i++) {
         copy_gf16(&g[i], &solution);
@@ -175,7 +181,15 @@ TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
         return_value += generate_random_32x32_gf16_matrix(&f[i][32], &prng);
     }
 
-    find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(&y0_y63, f, &x0_x31);
+//    clock_t start, end, total = 0;
+    unsigned int dummy;
+    unsigned long long t1 = __rdtscp(&dummy);
+    for (i = 0; i < 2; i++) {
+        find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(&y0_y63, f, &x0_x31, &prng);
+        find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(&y0_y63, f, &x0_x31, &prng);
+    }
+    unsigned long long t2 = __rdtscp(&dummy);
+    std::cout << "Time: " << t2 - t1 << std::endl;
     evaluate_32_quadratic_polynomials_at_x0_x63(&x0_x31_prime, f, &y0_y63);
     bitsliced_addition(&x0_x31_prime, &x0_x31_prime, &x0_x31);
     EXPECT_EQ(gf16_is_zero(x0_x31_prime, 0), 1);

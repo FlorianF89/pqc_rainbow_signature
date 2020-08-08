@@ -71,4 +71,13 @@ void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16
 
 void derive_public_key_from_private_key(public_key_t *public_key, private_key_t *private_key);
 
+typedef struct bitsliced_quadratic_polynomials {
+    bitsliced_gf16_t coefficients[(N * (N + 1) / 2)];
+} bitsliced_quadratic_polynomials_t;
+
+void replace_variable_by_linear_combination_in_quadratic_polynomial(bitsliced_quadratic_polynomials_t *modified_f,
+                                                                    bitsliced_quadratic_polynomials_t *original_f,
+                                                                    int variable_index,
+                                                                    bitsliced_gf16_t *linear_combination);
+
 #endif //PQC_RAINBOW_KEYGEN_H

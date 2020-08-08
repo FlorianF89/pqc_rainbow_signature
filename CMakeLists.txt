@@ -4,7 +4,7 @@ project(pqc_rainbow C)
 set(CMAKE_C_STANDARD 99)
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -o3")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast")
     message("c flags = ${CMAKE_C_FLAGS}")
 endif ()
 

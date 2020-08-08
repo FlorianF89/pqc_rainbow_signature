@@ -2,6 +2,7 @@
 // Created by Florian Caullery on 7/24/20.
 //
 
+#include <x86intrin.h>
 #include "gtest/gtest.h"
 #include "../src/lib/error_codes.h"
 
@@ -224,8 +225,9 @@ TEST(keygen, guassian_elimination_32x32_gf16_matrices) {
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
     clock_t t;
-    clock_t total = 0;
-    int total_iterations = 10;
+    int total_iterations = 100;
+    uint32_t dummy;
+    unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
         for (i = 0; i < 32; i++) {
             prng_gen(&prng, (unsigned char *) &s[i].c, sizeof(uint32_t));
@@ -233,9 +235,10 @@ TEST(keygen, guassian_elimination_32x32_gf16_matrices) {
             prng_gen(&prng, (unsigned char *) &s[i].x, sizeof(uint32_t));
             prng_gen(&prng, (unsigned char *) &s[i].y_x, sizeof(uint32_t));
         }
-        t = clock();
+        t1 = __rdtscp(&dummy);
         gaussian_elimination_for_32x32_gf16_matrix(s);
-        total += clock() - t;
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
         uint64_t mask = 0xFFFFFFFE;
         for (i = 0; i < 32; i++) {
             EXPECT_EQ(s[i].c & mask, 0);
@@ -333,13 +336,18 @@ TEST(keygen, derive_public_key_from_private_key) {
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
     clock_t t;
-    clock_t total = 0;
+//    clock_t total = 0;
     int total_iterations = 1;
+    unsigned int dummy;
+    unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
-        t = clock();
+//        t = clock();
+        t1 = __rdtscp(&dummy);
         generate_private_key(&private_key, &prng);
         derive_public_key_from_private_key(&public_key, &private_key);
-        total += clock() - t;
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
+//        total += clock() - t;
         uint64_t mq_accumulator = 0;
         uint64_t mp_accumulator = 0;
         for (i = 0; i < (N * (N + 1) / 2); i++) {
@@ -358,3 +366,44 @@ TEST(keygen, derive_public_key_from_private_key) {
     printf("public key gen: %f \n", (double) total / total_iterations);
 }
 
+TEST(keygen, replace_variable_by_linear_combination_in_quadratic_polynomial) {
+
+    bitsliced_quadratic_polynomials_t f, f_prime;
+    memset(&f, 0x00, sizeof(bitsliced_quadratic_polynomials_t));
+    f.coefficients[0].c = -1;
+    bitsliced_gf16_t linear_combination;
+    linear_combination.c = -1;
+    linear_combination.y = 0;
+    linear_combination.x = 0;
+    linear_combination.y_x = 0;
+
+    unsigned int dummy;
+    unsigned long long t1, t2, total = 0;
+    t1 = __rdtscp(&dummy);
+    replace_variable_by_linear_combination_in_quadratic_polynomial(&f_prime, &f, 0, &linear_combination);
+    t2 = __rdtscp(&dummy);
+    total += t2 - t1;
+    printf("replace variables: %f \n", (double) total * 32);
+    int i;
+    int next_square_coeff = 32 * N - (32 * 33) / 2 + 32;
+    int square_coeff_left = 64;
+    EXPECT_EQ(f_prime.coefficients[0].c, -1);
+    EXPECT_EQ(f_prime.coefficients[0].y, 0);
+    EXPECT_EQ(f_prime.coefficients[0].x, 0);
+    EXPECT_EQ(f_prime.coefficients[0].y_x, 0);
+    for (i = 1; i < N * (N + 1) / 2; i++) {
+        if (i == next_square_coeff) {
+            EXPECT_EQ(f_prime.coefficients[i].c, -1);
+            EXPECT_EQ(f_prime.coefficients[i].y, 0);
+            EXPECT_EQ(f_prime.coefficients[i].x, 0);
+            EXPECT_EQ(f_prime.coefficients[i].y_x, 0);
+            next_square_coeff += square_coeff_left;
+            square_coeff_left--;
+        } else {
+            EXPECT_EQ(f_prime.coefficients[i].c, 0);
+            EXPECT_EQ(f_prime.coefficients[i].y, 0);
+            EXPECT_EQ(f_prime.coefficients[i].x, 0);
+            EXPECT_EQ(f_prime.coefficients[i].y_x, 0);
+        }
+    }
+}

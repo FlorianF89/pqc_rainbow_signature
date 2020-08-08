@@ -115,7 +115,6 @@ void print_32x32_gf16_system(bitsliced_gf16_t m[32], bitsliced_gf16_t solution) 
 int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equations_coefficients[32],
                             bitsliced_gf16_t *linear_coefficients) {
     copy_gf16(solution, linear_coefficients);
-    print_32x32_gf16_system(equations_coefficients, *linear_coefficients);
     for (unsigned int i = 0; i < 31; i++) {
         bitsliced_gf16_t tmp = extract_then_expand(equations_coefficients[i], i, i);
         bitsliced_gf16_t tmp1;
@@ -135,8 +134,6 @@ int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equatio
         equations_coefficients[i].x &= (1u << (i + 1u)) - 1u;
         equations_coefficients[i].y_x &= (1u << (i + 1u)) - 1u;
     }
-    print_32x32_gf16_system(equations_coefficients, *solution);
-
     for (unsigned int i = 31; i > 0; i--) {
         bitsliced_gf16_t tmp = extract_then_expand(equations_coefficients[i], i, 0);
         shift_right_gf16(&tmp, &tmp, 64 - i);
@@ -163,7 +160,37 @@ int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equatio
 }
 
 void find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(bitsliced_gf16_t *preimage, bitsliced_gf16_t f[32][64],
-                                                               bitsliced_gf16_t *x0_x31) {
+                                                               bitsliced_gf16_t *x0_x31, prng_t *prng) {
 
+    uint8_t i, j;
+    bitsliced_gf16_t tmp, tmp2, accumulator;
+    bitsliced_gf16_t linear_system[32];
+    memset(&accumulator, 0x00, sizeof(accumulator));
+    memset(linear_system, 0x00, sizeof(linear_system));
+    int found = 0;
+    while (found == 0) {
+        prng_gen(prng, (uint8_t *) preimage, sizeof(bitsliced_gf16_t));
+        for (i = 0; i < 32; i++) {
+            evaluate_quadratic_polynomial_at_x0_x31(&tmp, i, f[i], preimage);
+            bitsliced_addition(&accumulator, &accumulator, &tmp);
+        }
+        bitsliced_addition(&accumulator, x0_x31, &accumulator);
+        for (i = 0; i < 32; i++) {
+            for (j = 0; j < 32; j++) {
+                copy_gf16(&tmp, &f[i][j + 32]);
+                bitsliced_multiplication(&f[i][j + 32], preimage, &tmp);
+                bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &f[i][j + 32], i);
+                bitsliced_addition(&linear_system[j], &linear_system[j], &tmp);
+            }
+        }
+        shift_right_gf16(&tmp, preimage, 32);
+        found = solve_32x32_gf16_system(&tmp2, linear_system, &accumulator);
+        if (found) {
+            preimage->c = (preimage->c & 0xFFFFFFFF) | (tmp2.c << 32u);
+            preimage->y = (preimage->y & 0xFFFFFFFF) | (tmp2.y << 32u);
+            preimage->x = (preimage->x & 0xFFFFFFFF) | (tmp2.x << 32u);
+            preimage->y_x = (preimage->y_x & 0xFFFFFFFF) | (tmp2.y_x << 32u);
+        }
+    }
 }
 
