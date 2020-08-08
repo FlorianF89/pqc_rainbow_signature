@@ -292,7 +292,7 @@ TEST(keygen, generate_private_key) {
     memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
-    int i, j;
+    int i, j, k, l;
     clock_t t;
     clock_t total = 0;
     int total_iterations = 1;
@@ -301,25 +301,48 @@ TEST(keygen, generate_private_key) {
         generate_private_key(&private_key, &prng);
         total += clock() - t;
         uint64_t s_accumulator = 0;
-        uint64_t t_accumulator = 0;
-        uint64_t f_accumulator = 0;
-        for (i = 0; i < 32; i++) {
-            s_accumulator |= private_key.s[i + O1].c;
-            s_accumulator |= private_key.s[i + O1].x;
-            s_accumulator |= private_key.s[i + O1].y;
-            s_accumulator |= private_key.s[i + O1].y_x;
-            t_accumulator |= private_key.t[0][i + O1].c;
-            t_accumulator |= private_key.t[0][i + O1].x;
-            t_accumulator |= private_key.t[0][i + O1].y;
-            t_accumulator |= private_key.t[0][i + O1].y_x;
-            f_accumulator |= private_key.f[0][0][i + O1].c;
-            f_accumulator |= private_key.f[0][0][i + O1].x;
-            f_accumulator |= private_key.f[0][0][i + O1].y;
-            f_accumulator |= private_key.f[0][0][i + O1].y_x;
+        uint64_t first_layer_accumulator = 0;
+        uint64_t second_layer_accumulator = 0;
+        //testing first layer
+        for (i = 0; i < N; i++) {
+            for (k = i; k < N; k++) {
+                int position = i * N - ((i + 1) * i / 2) + k;
+                if (i >= O1 || k >= O1 + O2) {
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].c & 0xFFFFFFFF, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].y & 0xFFFFFFFF, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].x & 0xFFFFFFFF, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].y_x & 0xFFFFFFFF, 0);
+                } else {
+                    first_layer_accumulator |= private_key.mq_polynomials.coefficients[position].c & 0xFFFFFFFF;
+                    first_layer_accumulator |= private_key.mq_polynomials.coefficients[position].y & 0xFFFFFFFF;
+                    first_layer_accumulator |= private_key.mq_polynomials.coefficients[position].x & 0xFFFFFFFF;
+                    first_layer_accumulator |= private_key.mq_polynomials.coefficients[position].y_x & 0xFFFFFFFF;
+                }
+            }
         }
-        EXPECT_NE(s_accumulator, 0);
-        EXPECT_NE(t_accumulator, 0);
-        EXPECT_NE(f_accumulator, 0);
+        //testing second layer
+        for (i = 0; i < N; i++) {
+            for (k = i; k < N; k++) {
+                int position = i * N - ((i + 1) * i / 2) + k;
+                if (i >= O1 + O2 || k >= O1 + O2) {
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].c & 0xFFFFFFFF00000000, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].y & 0xFFFFFFFF00000000, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].x & 0xFFFFFFFF00000000, 0);
+                    EXPECT_EQ(private_key.mq_polynomials.coefficients[position].y_x & 0xFFFFFFFF00000000, 0);
+                } else {
+                    second_layer_accumulator |=
+                            private_key.mq_polynomials.coefficients[position].c & 0xFFFFFFFF00000000;
+                    second_layer_accumulator |=
+                            private_key.mq_polynomials.coefficients[position].y & 0xFFFFFFFF00000000;
+                    second_layer_accumulator |=
+                            private_key.mq_polynomials.coefficients[position].x & 0xFFFFFFFF00000000;
+                    second_layer_accumulator |=
+                            private_key.mq_polynomials.coefficients[position].y_x & 0xFFFFFFFF00000000;
+                }
+            }
+        }
+        EXPECT_NE(first_layer_accumulator, 0);
+        EXPECT_NE(second_layer_accumulator, 0);
     }
     printf("private key gen: %f \n", (double) total / total_iterations);
 }
@@ -337,13 +360,13 @@ TEST(keygen, derive_public_key_from_private_key) {
     int i, j;
     clock_t t;
 //    clock_t total = 0;
-    int total_iterations = 1;
+    int total_iterations = 10;
     unsigned int dummy;
     unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
 //        t = clock();
-        t1 = __rdtscp(&dummy);
         generate_private_key(&private_key, &prng);
+        t1 = __rdtscp(&dummy);
         derive_public_key_from_private_key(&public_key, &private_key);
         t2 = __rdtscp(&dummy);
         total += t2 - t1;
