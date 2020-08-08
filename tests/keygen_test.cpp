@@ -292,15 +292,15 @@ TEST(keygen, generate_private_key) {
     memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
-    int i, j, k, l;
-    clock_t t;
-    clock_t total = 0;
-    int total_iterations = 1;
+    int i, j, k;
+    int total_iterations = 10;
+    unsigned int dummy;
+    unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
-        t = clock();
+        t1 = __rdtscp(&dummy);
         generate_private_key(&private_key, &prng);
-        total += clock() - t;
-        uint64_t s_accumulator = 0;
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
         uint64_t first_layer_accumulator = 0;
         uint64_t second_layer_accumulator = 0;
         //testing first layer
@@ -358,30 +358,22 @@ TEST(keygen, derive_public_key_from_private_key) {
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
-    clock_t t;
-//    clock_t total = 0;
     int total_iterations = 10;
     unsigned int dummy;
     unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
-//        t = clock();
         generate_private_key(&private_key, &prng);
         t1 = __rdtscp(&dummy);
         derive_public_key_from_private_key(&public_key, &private_key);
         t2 = __rdtscp(&dummy);
         total += t2 - t1;
-//        total += clock() - t;
         uint64_t mq_accumulator = 0;
         uint64_t mp_accumulator = 0;
         for (i = 0; i < (N * (N + 1) / 2); i++) {
-            mq_accumulator |= public_key.mq[i].c;
-            mp_accumulator |= public_key.mp[i].c;
-            mq_accumulator |= public_key.mq[i].y;
-            mp_accumulator |= public_key.mp[i].y;
-            mq_accumulator |= public_key.mq[i].x;
-            mp_accumulator |= public_key.mp[i].x;
-            mq_accumulator |= public_key.mq[i].y_x;
-            mp_accumulator |= public_key.mp[i].y_x;
+            mq_accumulator |= public_key.polynomials.coefficients[i].c;
+            mp_accumulator |= public_key.polynomials.coefficients[i].c;
+            mq_accumulator |= public_key.polynomials.coefficients[i].y;
+            mp_accumulator |= public_key.polynomials.coefficients[i].y;
         }
         EXPECT_NE(mq_accumulator, 0);
         EXPECT_NE(mp_accumulator, 0);
