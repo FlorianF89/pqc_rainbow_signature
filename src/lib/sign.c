@@ -6,76 +6,59 @@
 #include "sign.h"
 #include "keygen.h"
 
-
-void evaluate_quadratic_polynomial_at_x0_x31(bitsliced_gf16_t *evaluation, uint8_t position_to_put_evaluation,
-                                             bitsliced_gf16_t *f, bitsliced_gf16_t *x0_x31) {
-    bitsliced_gf16_t f_transposed[32];
-    bitsliced_gf16_t tmp;
-    transpose_32x32_gf16_matrix(f_transposed, f);
-    memset(evaluation, 0, sizeof(bitsliced_gf16_t));
-    uint32_t i;
+void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
+                                              bitsliced_gf16_t *x0_x31) {
+    unsigned int i, j;
+    bitsliced_gf16_t x0_to_x31_expanded[32];
     for (i = 0; i < 32; i++) {
-        bitsliced_multiplication(&tmp, &f_transposed[i], x0_x31);
-        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
-        bitsliced_addition(evaluation, evaluation, &tmp);
+        x0_to_x31_expanded[i].c = -1 * ((x0_x31->c >> i) & 0x01u);
+        x0_to_x31_expanded[i].y = -1 * ((x0_x31->y >> i) & 0x01u);
+        x0_to_x31_expanded[i].x = -1 * ((x0_x31->x >> i) & 0x01u);
+        x0_to_x31_expanded[i].y_x = -1 * ((x0_x31->y_x >> i) & 0x01u);
     }
-    bitsliced_multiplication(&tmp, evaluation, x0_x31);
-    bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(evaluation, &tmp,
-                                                                            position_to_put_evaluation);
-}
 
+    evaluations->c = 0;
+    evaluations->y = 0;
+    evaluations->x = 0;
+    evaluations->y_x = 0;
 
-void evaluate_32_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluation, bitsliced_gf16_t f[32][32],
-                                                 bitsliced_gf16_t *x0_x31) {
-
-    uint32_t i;
-    memset(evaluation, 0, sizeof(bitsliced_gf16_t));
+    bitsliced_gf16_t tmp, tmp1;
     for (i = 0; i < 32; i++) {
-        bitsliced_gf16_t fi_transposed[32];
-        bitsliced_gf16_t tmp, accumulator;
-        transpose_32x32_gf16_matrix(fi_transposed, f[i]);
-        memset(&accumulator, 0, sizeof(bitsliced_gf16_t));
-        uint32_t j;
-        for (j = 0; j < 32; j++) {
-            bitsliced_multiplication(&tmp, &fi_transposed[j], x0_x31);
-            bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, j);
-            bitsliced_addition(&accumulator, &accumulator, &tmp);
+        for (j = i; j < 32; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            bitsliced_multiplication(&tmp, &x0_to_x31_expanded[i], &x0_to_x31_expanded[j]);
+            bitsliced_multiplication(&tmp1, &tmp, &f->coefficients[position]);
+            bitsliced_addition(evaluations, evaluations, &tmp1);
         }
-        bitsliced_multiplication(&tmp, &accumulator, x0_x31);
-        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&accumulator, &tmp, i);
-        bitsliced_addition(evaluation, &accumulator, evaluation);
     }
 }
 
+void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
+                                              bitsliced_gf16_t *x0_x64) {
+    unsigned int i, j;
+    bitsliced_gf16_t x0_to_x63_expanded[64];
+    for (i = 0; i < 64; i++) {
+        x0_to_x63_expanded[i].c = -1 * ((x0_x64->c >> i) & 0x01u);
+        x0_to_x63_expanded[i].y = -1 * ((x0_x64->y >> i) & 0x01u);
+        x0_to_x63_expanded[i].x = -1 * ((x0_x64->x >> i) & 0x01u);
+        x0_to_x63_expanded[i].y_x = -1 * ((x0_x64->y_x >> i) & 0x01u);
+    }
 
-void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, bitsliced_gf16_t f[32][64],
-                                                 bitsliced_gf16_t *x0_x63) {
+    evaluations->c = 0;
+    evaluations->y = 0;
+    evaluations->x = 0;
+    evaluations->y_x = 0;
 
-    uint32_t i;
-    memset(evaluation, 0, sizeof(bitsliced_gf16_t));
-    for (i = 0; i < 32; i++) {
-        bitsliced_gf16_t fi_left_transposed[32];
-        bitsliced_gf16_t fi_right_transposed[32];
-        bitsliced_gf16_t tmp, accumulator;
-        transpose_32x32_gf16_matrix(fi_left_transposed, f[i]);
-        transpose_32x32_gf16_matrix(fi_right_transposed, &f[i][32]);
-        uint32_t j;
-        for (j = 0; j < 32; j++) {
-            shift_left_gf16(&fi_right_transposed[j], &fi_right_transposed[j], 32);
-            bitsliced_addition(&fi_left_transposed[j], &fi_left_transposed[j], &fi_right_transposed[j]);
+    bitsliced_gf16_t tmp, tmp1;
+    for (i = 0; i < 64; i++) {
+        for (j = i; j < 64; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            bitsliced_multiplication(&tmp, &x0_to_x63_expanded[i], &x0_to_x63_expanded[j]);
+            bitsliced_multiplication(&tmp1, &tmp, &f->coefficients[position]);
+            bitsliced_addition(evaluations, evaluations, &tmp1);
         }
-        memset(&accumulator, 0, sizeof(bitsliced_gf16_t));
-        for (j = 0; j < 32; j++) {
-            bitsliced_multiplication(&tmp, &fi_left_transposed[j], x0_x63);
-            bitsliced_gf16_sum_64_first_elements_and_place_result_in_given_position(&tmp, &tmp, j);
-            bitsliced_addition(&accumulator, &accumulator, &tmp);
-        }
-        bitsliced_multiplication(&tmp, &accumulator, x0_x63);
-        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&accumulator, &tmp, i);
-        bitsliced_addition(evaluation, &accumulator, evaluation);
     }
 }
-
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
     if ((in.c >> bit_position) & 0x01u) {
@@ -103,6 +86,7 @@ static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position
 void print_32x32_gf16_system(bitsliced_gf16_t m[32], bitsliced_gf16_t solution) {
     int i, j;
     for (i = 0; i < 32; i++) {
+        printf("l%02d: ", i);
         for (j = 0; j < 32; j++) {
             print_bitsliced(m[j], i);
         }
@@ -112,15 +96,54 @@ void print_32x32_gf16_system(bitsliced_gf16_t m[32], bitsliced_gf16_t solution) 
     putchar(10);
 }
 
+static bitsliced_gf16_t swap_elements_i_and_k(bitsliced_gf16_t in, unsigned int i, unsigned int j) {
+    bitsliced_gf16_t r;
+    uint64_t b = in.c;
+    uint64_t x = ((b >> i) ^ (b >> j)) & ((1U << 1) - 1); // XOR temporary
+    r.c = b ^ ((x << i) | (x << j));
+
+    b = in.y;
+    x = ((b >> i) ^ (b >> j)) & ((1U << 1) - 1); // XOR temporary
+    r.y = b ^ ((x << i) | (x << j));
+
+    b = in.x;
+    x = ((b >> i) ^ (b >> j)) & ((1U << 1) - 1); // XOR temporary
+    r.x = b ^ ((x << i) | (x << j));
+
+    b = in.y_x;
+    x = ((b >> i) ^ (b >> j)) & ((1U << 1) - 1); // XOR temporary
+    r.y_x = b ^ ((x << i) | (x << j));
+
+    return r;
+}
+
+//todo Does not work if system is undetermined
 int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equations_coefficients[32],
                             bitsliced_gf16_t *linear_coefficients) {
     copy_gf16(solution, linear_coefficients);
-    for (unsigned int i = 0; i < 31; i++) {
+    unsigned int i, j, k;
+    for (i = 0; i < 31; i++) {
+        for (j = i + 1; j < 31; j++) {
+            if (gf16_is_zero(equations_coefficients[i], i)) {
+//                printf("\n swapping lines %d and %d. Before:\n", i, j);
+//                print_32x32_gf16_system(equations_coefficients, *solution);
+                for (k = i; k < 32; k++)
+                    equations_coefficients[k] = swap_elements_i_and_k(equations_coefficients[k], i, j);
+                *solution = swap_elements_i_and_k(*solution, i, j);
+//                printf("\n swapping lines %d and %d. After:\n", i, j);
+//                print_32x32_gf16_system(equations_coefficients, *solution);
+            } else {
+                break;
+            }
+        }
+        if (j == 32) {
+            return 0;
+        }
         bitsliced_gf16_t tmp = extract_then_expand(equations_coefficients[i], i, i);
         bitsliced_gf16_t tmp1;
         bitsliced_inversion(&tmp1, &tmp);
         bitsliced_multiplication(&tmp, &tmp1, &equations_coefficients[i]);
-        for (unsigned int j = i + 1u; j < 32; ++j) {
+        for (j = i + 1u; j < 32; ++j) {
             bitsliced_gf16_t tmp2 = extract_then_expand(equations_coefficients[j], i, i + 1);
             bitsliced_multiplication(&tmp1, &tmp, &tmp2);
             bitsliced_addition(&equations_coefficients[j], &tmp1, &equations_coefficients[j]);
@@ -134,7 +157,7 @@ int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equatio
         equations_coefficients[i].x &= (1u << (i + 1u)) - 1u;
         equations_coefficients[i].y_x &= (1u << (i + 1u)) - 1u;
     }
-    for (unsigned int i = 31; i > 0; i--) {
+    for (i = 31; i > 0; i--) {
         bitsliced_gf16_t tmp = extract_then_expand(equations_coefficients[i], i, 0);
         shift_right_gf16(&tmp, &tmp, 64 - i);
         bitsliced_gf16_t tmp1, tmp2;
@@ -159,38 +182,42 @@ int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equatio
     return has_solution == 0;
 }
 
-void find_preimage_of_x0_x31_by_32_polynomials_in_64_variables(bitsliced_gf16_t *preimage, bitsliced_gf16_t f[32][64],
-                                                               bitsliced_gf16_t *x0_x31, prng_t *prng) {
+void find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *preimages,
+                                                              bitsliced_quadratic_polynomials_t *f,
+                                                              bitsliced_gf16_t *x0_x31, prng_t *prng) {
 
     uint8_t i, j;
     bitsliced_gf16_t tmp, tmp2, accumulator;
     bitsliced_gf16_t linear_system[32];
-    memset(&accumulator, 0x00, sizeof(accumulator));
     memset(linear_system, 0x00, sizeof(linear_system));
     int found = 0;
-    while (found == 0) {
-        prng_gen(prng, (uint8_t *) preimage, sizeof(bitsliced_gf16_t));
-        for (i = 0; i < 32; i++) {
-            evaluate_quadratic_polynomial_at_x0_x31(&tmp, i, f[i], preimage);
-            bitsliced_addition(&accumulator, &accumulator, &tmp);
-        }
+    int attempt = 0;
+    while (found == 0 && attempt < 100000) {
+        prng_gen(prng, (uint8_t *) preimages, sizeof(bitsliced_gf16_t));
+        evaluate_quadratic_polynomials_at_x0_x31(&accumulator, f, preimages);
         bitsliced_addition(&accumulator, x0_x31, &accumulator);
+        bitsliced_gf16_t preimages_0_31_expanded[32];
         for (i = 0; i < 32; i++) {
-            for (j = 0; j < 32; j++) {
-                copy_gf16(&tmp, &f[i][j + 32]);
-                bitsliced_multiplication(&f[i][j + 32], preimage, &tmp);
-                bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &f[i][j + 32], i);
-                bitsliced_addition(&linear_system[j], &linear_system[j], &tmp);
+            preimages_0_31_expanded[i].c = -1 * ((preimages->c >> i) & 0x01u);
+            preimages_0_31_expanded[i].y = -1 * ((preimages->y >> i) & 0x01u);
+            preimages_0_31_expanded[i].x = -1 * ((preimages->x >> i) & 0x01u);
+            preimages_0_31_expanded[i].y_x = -1 * ((preimages->y_x >> i) & 0x01u);
+        }
+        for (i = 0; i < 32; i++) {
+            for (j = 32; j < 64; j++) {
+                int position = i * N - ((i + 1) * i / 2) + j;
+                bitsliced_multiplication(&tmp, &preimages_0_31_expanded[i], &f->coefficients[position]);
+                bitsliced_addition(&linear_system[j - 32], &linear_system[j - 32], &tmp);
             }
         }
-        shift_right_gf16(&tmp, preimage, 32);
         found = solve_32x32_gf16_system(&tmp2, linear_system, &accumulator);
         if (found) {
-            preimage->c = (preimage->c & 0xFFFFFFFF) | (tmp2.c << 32u);
-            preimage->y = (preimage->y & 0xFFFFFFFF) | (tmp2.y << 32u);
-            preimage->x = (preimage->x & 0xFFFFFFFF) | (tmp2.x << 32u);
-            preimage->y_x = (preimage->y_x & 0xFFFFFFFF) | (tmp2.y_x << 32u);
+            preimages->c = (preimages->c & 0xFFFFFFFF) | (tmp2.c << 32u);
+            preimages->y = (preimages->y & 0xFFFFFFFF) | (tmp2.y << 32u);
+            preimages->x = (preimages->x & 0xFFFFFFFF) | (tmp2.x << 32u);
+            preimages->y_x = (preimages->y_x & 0xFFFFFFFF) | (tmp2.y_x << 32u);
         }
+        attempt++;
     }
 }
 

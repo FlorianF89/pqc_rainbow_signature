@@ -253,6 +253,7 @@ void set_32x32_gf16_matrix_to_identity(bitsliced_gf16_t a[32]) {
 
 void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]) {
 
+    //TODO optimize to use the 64bits per words
     bitsliced_gf16_t a_transposed[32];
     bitsliced_gf16_t tmp;
     transpose_32x32_gf16_matrix(a_transposed, a);
