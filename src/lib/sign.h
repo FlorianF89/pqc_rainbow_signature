@@ -13,7 +13,7 @@ void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bit
                                               bitsliced_gf16_t *x0_x31);
 
 void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
-                                              bitsliced_gf16_t *x0_x64);
+                                              bitsliced_gf16_t *x0_x63);
 
 
 void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, bitsliced_gf16_t f[32][64],
@@ -22,13 +22,19 @@ void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, b
 int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equations_coefficients[32],
                             bitsliced_gf16_t *linear_coefficients);
 
+void evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(bitsliced_gf16_t *evaluations,
+                                                              bitsliced_quadratic_polynomials_t *f,
+                                                              bitsliced_gf16_t *x0_x63, bitsliced_gf16_t *x64_x95);
+
 void find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *preimages,
+                                                              bitsliced_gf16_t *evaluation_in_x0_x31,
                                                               bitsliced_quadratic_polynomials_t *f,
                                                               bitsliced_gf16_t *x0_x31, prng_t *prng);
 
-void find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(bitsliced_gf16_t *preimages,
+int find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(bitsliced_gf16_t *y64_y96,
                                                                bitsliced_quadratic_polynomials_t *f,
-                                                               bitsliced_gf16_t *x0_x31, prng_t *prng);
+                                                               bitsliced_gf16_t *y0_y64, bitsliced_gf16_t *x0_x64,
+                                                               bitsliced_gf16_t *evaluation_in_x0_x31);
 
 
 #endif //PQC_RAINBOW_SIGN_H

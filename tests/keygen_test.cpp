@@ -261,10 +261,10 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
-    clock_t t;
-    clock_t total = 0;
-    int total_iterations = 10;
+    int total_iterations = 100;
     set_32x32_gf16_matrix_to_identity(identity);
+    unsigned int dummy;
+    unsigned long long t1, t2, total = 0;
     for (j = 0; j < total_iterations; j++) {
         for (i = 0; i < 32; i++) {
             prng_gen(&prng, (unsigned char *) &a[i].c, sizeof(uint32_t));
@@ -272,9 +272,10 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
             prng_gen(&prng, (unsigned char *) &a[i].x, sizeof(uint32_t));
             prng_gen(&prng, (unsigned char *) &a[i].y_x, sizeof(uint32_t));
         }
-        t = clock();
+        t1 = __rdtscp(&dummy);
         multiply_32x32_gf16_matrices(a_times_b, a, identity);
-        total += clock() - t;
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
         for (i = 0; i < 32; i++) {
             EXPECT_EQ(a[i].c, a_times_b[i].c);
             EXPECT_EQ(a[i].y, a_times_b[i].y);

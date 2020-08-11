@@ -125,7 +125,7 @@ TEST(sign_tests, solve_32x32_gf16_system) {
 }
 
 TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
-    bitsliced_gf16_t x0_x31, x0_x31_prime, y0_y63;
+    bitsliced_gf16_t x0_x31, x0_x31_prime, y0_y63, evaluation_in_x0_x31;
     bitsliced_quadratic_polynomials_t f;
     uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
 
@@ -151,12 +151,64 @@ TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
     unsigned int dummy;
     unsigned long long t1 = __rdtscp(&dummy);
     for (i = 0; i < 20; i++) {
-        find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&y0_y63, &f, &x0_x31, &prng);
+        find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&y0_y63, &evaluation_in_x0_x31, &f, &x0_x31, &prng);
     }
     unsigned long long t2 = __rdtscp(&dummy);
     std::cout << "Time: " << (t2 - t1) / 10 << std::endl;
     evaluate_quadratic_polynomials_at_x0_x63(&x0_x31_prime, &f, &y0_y63);
     bitsliced_addition(&x0_x31_prime, &x0_x31_prime, &x0_x31);
     EXPECT_EQ(gf16_is_zero(x0_x31_prime, 0), 1);
+}
+
+TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
+    //find the solution to (f_0(y0, y95), ..., f63(y0, ..., y95)) = (x0, x,63)
+    bitsliced_gf16_t x0_x63, x0_x63_prime, y0_y63, y64_y95, evaluation_in_x0_x31;
+    bitsliced_quadratic_polynomials_t f;
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+
+    memset(&x0_x63_prime, 0xff, sizeof(bitsliced_gf16_t));
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_gen(&prng, (uint8_t *) &x0_x63, sizeof(bitsliced_gf16_t));
+
+    int i, j;
+    memset(&f, 0x00, sizeof(f));
+    //first layer
+    for (i = 0; i < 32; i++) {
+        for (j = i; j < 64; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+        }
+        for (j = 64; j < 96; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            shift_left_gf16(&f.coefficients[position], &f.coefficients[position], 32);
+        }
+    }
+    //second layer
+    for (i = 32; i < 64; i++) {
+        for (j = i; j < 96; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            shift_left_gf16(&f.coefficients[position], &f.coefficients[position], 32);
+        }
+    }
+
+    unsigned int dummy;
+    int return_value = 0;
+    unsigned long long t1 = __rdtscp(&dummy);
+    for (i = 0; i < 20; i++) {
+        find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&y0_y63, &evaluation_in_x0_x31, &f, &x0_x63, &prng);
+        return_value = find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(&y64_y95, &f, &y0_y63, &x0_x63,
+                                                                   &evaluation_in_x0_x31);
+    }
+    unsigned long long t2 = __rdtscp(&dummy);
+    printf("sign: %.2fcc\n", (float) (t2 - t1) / 20.0);
+    std::cout << "sign: " << (float) (t2 - t1) / 20.0 << std::endl;
+    evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(&x0_x63_prime, &f, &y0_y63, &y64_y95);
+    bitsliced_addition(&x0_x63_prime, &x0_x63_prime, &x0_x63);
+    EXPECT_EQ(return_value, 1);
+    EXPECT_EQ(gf16_is_zero(x0_x63_prime, 0), 1);
 }
 
