@@ -25,6 +25,7 @@ typedef struct private_key {
     gf16_32x32_matrix s_prime;
     bitsliced_gf16_t t1_t2[N - V1];
     bitsliced_gf16_t new_t3[N - V2];
+    bitsliced_gf16_t t1_t3_minus_t2[N - V2];
     bitsliced_quadratic_polynomials_t mq_polynomials;
     gf16_32x32_matrix t1;
     gf16_32x32_matrix t2;

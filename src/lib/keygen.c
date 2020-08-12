@@ -440,7 +440,14 @@ int generate_private_key(private_key_t *private_key, prng_t *prng) {
     generate_random_matrix_s(private_key, prng);
     prng_gen(prng, (uint8_t *) private_key->t1_t2, sizeof(private_key->t1_t2));
     prng_gen(prng, (uint8_t *) private_key->new_t3, sizeof(private_key->new_t3));
+    multiply_32x32_gf16_matrices(private_key->t1_t3_minus_t2, private_key->t1_t2, private_key->new_t3);
     int i, j;
+    bitsliced_gf16_t tmp;
+    for (i = 0; i < 32; i++) {
+        shift_right_gf16(&tmp, &private_key->t1_t2[i], 32);
+        bitsliced_addition(&private_key->t1_t3_minus_t2[i], &private_key->t1_t3_minus_t2[i], &tmp);
+    }
+
     //TODO optimize this part
     for (i = 0; i < O1 + O2; i++) {
         for (j = i; j < O1 + O2; j++) {

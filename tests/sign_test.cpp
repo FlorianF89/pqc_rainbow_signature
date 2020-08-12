@@ -197,18 +197,51 @@ TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
 
     unsigned int dummy;
     int return_value = 0;
-    unsigned long long t1 = __rdtscp(&dummy);
+    unsigned long long total = 0;
     for (i = 0; i < 20; i++) {
+        unsigned long long t1 = __rdtscp(&dummy);
         find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&y0_y63, &evaluation_in_x0_x31, &f, &x0_x63, &prng);
         return_value = find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(&y64_y95, &f, &y0_y63, &x0_x63,
-                                                                   &evaluation_in_x0_x31);
+                                                                                  &evaluation_in_x0_x31);
+        unsigned long long t2 = __rdtscp(&dummy);
+        total += t2 - t1;
     }
-    unsigned long long t2 = __rdtscp(&dummy);
-    printf("sign: %.2fcc\n", (float) (t2 - t1) / 20.0);
-    std::cout << "sign: " << (float) (t2 - t1) / 20.0 << std::endl;
+    printf("sign: %.2fcc\n", total / 20.0);
+    std::cout << "sign: " << total / 20.0 << std::endl;
     evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(&x0_x63_prime, &f, &y0_y63, &y64_y95);
     bitsliced_addition(&x0_x63_prime, &x0_x63_prime, &x0_x63);
     EXPECT_EQ(return_value, 1);
     EXPECT_EQ(gf16_is_zero(x0_x63_prime, 0), 1);
+}
+
+
+TEST(sign_tests, rainbow_sign) {
+
+    private_key_t private_key;
+
+    bitsliced_gf16_t signature[2];
+    memset(signature, 0x00, sizeof(signature));
+
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    uint8_t message[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    memset(message, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+
+    ASSERT_EQ(generate_private_key(&private_key, &prng), SUCCESS);
+    EXPECT_EQ(rainbow_sign(signature, &private_key, message, &prng, SECRET_KEY_SEED_BYTE_LENGTH), SUCCESS);
+
+    int i;
+
+    unsigned int dummy;
+    unsigned long long total = 0, t1, t2;
+    for (i = 0; i < 20; i++) {
+        t1 = __rdtscp(&dummy);
+        rainbow_sign(signature, &private_key, message, &prng, SECRET_KEY_SEED_BYTE_LENGTH);
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
+    }
+    printf("full sign: %.2fcc\n", total / 20.0);
 }
 

@@ -5,6 +5,8 @@
 #include <memory.h>
 #include "sign.h"
 #include "keygen.h"
+#include "hash_len_config.h"
+#include "utils_hash.h"
 
 void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
                                               bitsliced_gf16_t *x0_x31) {
@@ -216,10 +218,10 @@ int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equatio
     return has_solution == 0;
 }
 
-void find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *preimages,
-                                                              bitsliced_gf16_t *evaluation_in_x0_x31,
-                                                              bitsliced_quadratic_polynomials_t *f,
-                                                              bitsliced_gf16_t *x0_x31, prng_t *prng) {
+int find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *preimages,
+                                                             bitsliced_gf16_t *evaluation_in_x0_x31,
+                                                             bitsliced_quadratic_polynomials_t *f,
+                                                             bitsliced_gf16_t *x0_x31, prng_t *prng) {
 
     uint8_t i, j;
     bitsliced_gf16_t tmp, tmp2, linear_terms_of_system;
@@ -254,6 +256,7 @@ void find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *
         }
         attempt++;
     }
+    return found;
 }
 
 
@@ -265,25 +268,80 @@ int find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(bitsliced_gf16_t 
     bitsliced_gf16_t tmp, accumulator;
     bitsliced_gf16_t linear_system[32];
     memset(linear_system, 0x00, sizeof(linear_system));
-        evaluate_quadratic_polynomials_at_x0_x63(&accumulator, f, y0_y64);
-        bitsliced_addition(&accumulator, x0_x64, &accumulator);
-        bitsliced_gf16_t y0_y63_expanded[64];
-        for (i = 0; i < 64; i++) {
-            y0_y63_expanded[i].c = -1 * ((y0_y64->c >> i) & 0x01u);
-            y0_y63_expanded[i].y = -1 * ((y0_y64->y >> i) & 0x01u);
-            y0_y63_expanded[i].x = -1 * ((y0_y64->x >> i) & 0x01u);
-            y0_y63_expanded[i].y_x = -1 * ((y0_y64->y_x >> i) & 0x01u);
+    evaluate_quadratic_polynomials_at_x0_x63(&accumulator, f, y0_y64);
+    bitsliced_addition(&accumulator, x0_x64, &accumulator);
+    bitsliced_gf16_t y0_y63_expanded[64];
+    for (i = 0; i < 64; i++) {
+        y0_y63_expanded[i].c = -1 * ((y0_y64->c >> i) & 0x01u);
+        y0_y63_expanded[i].y = -1 * ((y0_y64->y >> i) & 0x01u);
+        y0_y63_expanded[i].x = -1 * ((y0_y64->x >> i) & 0x01u);
+        y0_y63_expanded[i].y_x = -1 * ((y0_y64->y_x >> i) & 0x01u);
+    }
+    for (i = 0; i < 64; i++) {
+        for (j = 64; j < 96; j++) {
+            int position = i * N - ((i + 1) * i / 2) + j;
+            bitsliced_multiplication(&tmp, &y0_y63_expanded[i], &f->coefficients[position]);
+            bitsliced_addition(&linear_system[j - 64], &linear_system[j - 64], &tmp);
         }
-        for (i = 0; i < 64; i++) {
-            for (j = 64; j < 96; j++) {
-                int position = i * N - ((i + 1) * i / 2) + j;
-                bitsliced_multiplication(&tmp, &y0_y63_expanded[i], &f->coefficients[position]);
-                bitsliced_addition(&linear_system[j - 64], &linear_system[j - 64], &tmp);
-            }
-        }
-        for (i = 0; i < 32; i++) {
-            shift_right_gf16(linear_system + i, linear_system + i, 32);
-        }
-        shift_right_gf16(&accumulator, &accumulator, 32);
-        return solve_32x32_gf16_system(y64_y96, linear_system, &accumulator);
+    }
+    for (i = 0; i < 32; i++) {
+        shift_right_gf16(linear_system + i, linear_system + i, 32);
+    }
+    shift_right_gf16(&accumulator, &accumulator, 32);
+    return solve_32x32_gf16_system(y64_y96, linear_system, &accumulator);
+}
+
+static void multiply_vector_by_32x32_matrix(bitsliced_gf16_t *result, bitsliced_gf16_t matrix[32],
+                                            bitsliced_gf16_t *vector) {
+    bitsliced_gf16_t a_transposed[32];
+    bitsliced_gf16_t tmp;
+    transpose_32x32_gf16_matrix(a_transposed, matrix);
+    memset(result, 0, sizeof(bitsliced_gf16_t));
+    uint32_t i;
+    for (i = 0; i < 32; i++) {
+        bitsliced_multiplication(&tmp, &a_transposed[i], vector);
+        bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
+        bitsliced_addition(result, result, &tmp);
+    }
+}
+
+int rainbow_sign(bitsliced_gf16_t *signature, private_key_t *private_key, uint8_t *message, prng_t *prng,
+                 uint64_t message_length) {
+    int signature_succeeded = 0, offset = 0;
+    bitsliced_gf16_t x, tmp, tmp1;
+    memset(&x, 0, sizeof(x));
+    uint8_t digest[_HASH_LEN];
+    hash_msg(digest, _HASH_LEN, message, message_length);
+    memcpy(&x.c, digest, sizeof(uint64_t));
+    offset += sizeof(uint64_t);
+    memcpy(&x.y, digest + offset, sizeof(uint64_t));
+    offset += sizeof(uint64_t);
+    memcpy(&x.x, digest + offset, sizeof(uint64_t));
+    offset += sizeof(uint64_t);
+    memcpy(&x.y_x, digest + offset, sizeof(uint64_t));
+
+    shift_right_gf16(&tmp, &x, 32);
+    multiply_vector_by_32x32_matrix(&tmp1, private_key->s_prime, &tmp);
+    bitsliced_addition(&x, &x, &tmp1);
+    int attempt = 0;
+    while (signature_succeeded == 0 && attempt < 1) {
+        signature_succeeded = find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&signature[0], &tmp,
+                                                                                       &private_key->mq_polynomials,
+                                                                                       &x, prng);
+
+        signature_succeeded *= find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(&signature[1],
+                                                                                         &private_key->mq_polynomials,
+                                                                                         &signature[0], &x, &tmp);
+        attempt++;
+    }
+    shift_right_gf16(&tmp, &signature[0], 32);
+    multiply_vector_by_32x32_matrix(&tmp1, private_key->t1_t2, &tmp);
+    bitsliced_addition(&signature[0], &tmp1, &signature[0]);
+    multiply_vector_by_32x32_matrix(&tmp1, private_key->t1_t3_minus_t2, &signature[1]);
+    bitsliced_addition(&signature[0], &tmp1, &signature[0]);
+    multiply_vector_by_32x32_matrix(&tmp1, private_key->new_t3, &signature[1]);
+    shift_left_gf16(&tmp1, &tmp1, 32);
+    bitsliced_addition(&signature[0], &tmp1, &signature[0]);
+
+    return signature_succeeded;
 }

@@ -4,7 +4,7 @@ project(pqc_rainbow C)
 set(CMAKE_C_STANDARD 99)
 
 if (CMAKE_BUILD_TYPE MATCHES Release)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Ofast -fno-vectorize -fno-slp-vectorize")
     message("c flags = ${CMAKE_C_FLAGS}")
 endif ()
 
