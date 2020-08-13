@@ -232,14 +232,20 @@ void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bit
 
 }
 
-void bitsliced_gf16_sum_64_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
-                                                                             bitsliced_gf16_t *in,
-                                                                             uint32_t position_to_place) {
+void bitsliced_gf16_sum_two_halves_and_place_results_in_given_positions(bitsliced_gf16_t *out, bitsliced_gf16_t *in,
+                                                                        uint32_t position_to_place_first_half,
+                                                                        uint32_t position_to_place_second_half) {
 
-    out->c = (parity_of_64_bit_words(in->c)) << position_to_place;
-    out->y = (parity_of_64_bit_words(in->y)) << position_to_place;
-    out->x = (parity_of_64_bit_words(in->x)) << position_to_place;
-    out->y_x = (parity_of_64_bit_words(in->y_x)) << position_to_place;
+
+    out->c = (parity_of_32_bit_words(in->c)) << position_to_place_first_half;
+    out->y = (parity_of_32_bit_words(in->y)) << position_to_place_first_half;
+    out->x = (parity_of_32_bit_words(in->x)) << position_to_place_first_half;
+    out->y_x = (parity_of_32_bit_words(in->y_x)) << position_to_place_first_half;
+
+    out->c ^= (parity_of_32_bit_words(in->c >> 32)) << position_to_place_second_half;
+    out->y ^= (parity_of_32_bit_words(in->y >> 32)) << position_to_place_second_half;
+    out->x ^= (parity_of_32_bit_words(in->x >> 32)) << position_to_place_second_half;
+    out->y_x ^= (parity_of_32_bit_words(in->y_x >> 32)) << position_to_place_second_half;
 
 }
 
@@ -255,17 +261,26 @@ void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16
 
     //TODO optimize to use the 64bits per words
     bitsliced_gf16_t a_transposed[32];
-    bitsliced_gf16_t tmp;
+    bitsliced_gf16_t tmp, tmp1, tmp2;
     transpose_32x32_gf16_matrix(a_transposed, a);
     memset(a_times_b, 0, 32 * sizeof(bitsliced_gf16_t));
     uint32_t i, j;
-    for (i = 0; i < 32; i++) {
+    for (i = 0; i < 16; i++) {
+        move_two_halves_gf16_into_one(&tmp1, &a_transposed[2 * i], &a_transposed[2 * i + 1]);
         for (j = 0; j < 32; j++) {
-            bitsliced_multiplication(&tmp, &a_transposed[i], &b[j]);
-            bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
-            bitsliced_addition(&a_times_b[j], &a_times_b[j], &tmp);
+            move_two_halves_gf16_into_one(&tmp2, &b[j], &b[j]);
+            bitsliced_multiplication(&tmp, &tmp2, &tmp1);
+            bitsliced_gf16_sum_two_halves_and_place_results_in_given_positions(&tmp2, &tmp, 2 * i, 2 * i + 1);
+            bitsliced_addition(&a_times_b[j], &a_times_b[j], &tmp2);
         }
     }
+//    for (i = 0; i < 32; i++) {
+//        for (j = 0; j < 32; j++) {
+//            bitsliced_multiplication(&tmp, &a_transposed[i], &b[j]);
+//            bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(&tmp, &tmp, i);
+//            bitsliced_addition(&a_times_b[j], &a_times_b[j], &tmp);
+//        }
+//    }
 }
 
 void add_32x32_gf16_matrices(bitsliced_gf16_t a_plus_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]) {

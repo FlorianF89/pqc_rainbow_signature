@@ -62,9 +62,9 @@ void bitsliced_gf16_sum_32_first_elements_and_place_result_in_given_position(bit
                                                                              bitsliced_gf16_t *in,
                                                                              uint32_t position_to_place);
 
-void bitsliced_gf16_sum_64_first_elements_and_place_result_in_given_position(bitsliced_gf16_t *out,
-                                                                             bitsliced_gf16_t *in,
-                                                                             uint32_t position_to_place);
+void bitsliced_gf16_sum_two_halves_and_place_results_in_given_positions(bitsliced_gf16_t *out, bitsliced_gf16_t *in,
+                                                                        uint32_t position_to_place_first_half,
+                                                                        uint32_t position_to_place_second_half);
 
 uint32_t parity_of_32_bit_words(uint32_t in);
 

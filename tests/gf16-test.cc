@@ -1,3 +1,4 @@
+#include <x86intrin.h>
 #include "gtest/gtest.h"
 #include "../src/lib/error_codes.h"
 
@@ -79,6 +80,37 @@ TEST(gf16_inversion, gf16_inversion_extensive) {
     EXPECT_EQ (result.y, ones.y);
     EXPECT_EQ (result.x, ones.x);
     EXPECT_EQ (result.y_x, ones.y_x);
+}
+
+TEST(gf16, compare_vectorized) {
+    bitsliced_gf16_t a[4], b[4], a_times_b[4];
+
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_gen(&prng, (uint8_t *) &a, sizeof(a));
+    prng_gen(&prng, (uint8_t *) &b, sizeof(b));
+    unsigned int dummy, i;
+    unsigned long long total = 0, t1, t2;
+    for (i = 0; i < 1000000; i++) {
+        t1 = __rdtscp(&dummy);
+        bitsliced_multiplication(&a_times_b[0], &a[0], &b[0]);
+        bitsliced_multiplication(&a_times_b[1], &a[1], &b[1]);
+        bitsliced_multiplication(&a_times_b[2], &a[2], &b[2]);
+        bitsliced_multiplication(&a_times_b[3], &a[3], &b[3]);
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
+    }
+    printf("non vec mul: %.2fcc\n", total / 1000000.0);
+    total = 0;
+    for (i = 0; i < 1000000; i++) {
+        t1 = __rdtscp(&dummy);
+        bitsliced_vectorized_multiplication(a_times_b, a, b);
+        t2 = __rdtscp(&dummy);
+        total += t2 - t1;
+    }
+    printf("vec mul: %.2fcc\n", total / 1000000.0);
 }
 
 int main(int argc, char **argv) {

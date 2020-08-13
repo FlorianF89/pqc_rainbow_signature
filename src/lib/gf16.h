@@ -33,6 +33,9 @@ void bitsliced_addition(bitsliced_gf16_t *a_times_b, bitsliced_gf16_t *a, bitsli
 
 void bitsliced_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b);
 
+void
+bitsliced_vectorized_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b);
+
 void bitsliced_square(bitsliced_gf16_t *a_square, bitsliced_gf16_t *a);
 
 void bitsliced_inversion(bitsliced_gf16_t *a_inverse, bitsliced_gf16_t *a);

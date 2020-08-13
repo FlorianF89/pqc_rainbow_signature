@@ -1,6 +1,7 @@
 #include "gf16.h"
 #include <time.h>
 #include <stdio.h>
+#include <immintrin.h>
 
 int bitsliced_gf16_is_one(bitsliced_gf16_t in) {
 
@@ -29,9 +30,9 @@ void copy_gf16(bitsliced_gf16_t *destination, bitsliced_gf16_t *source) {
 void move_two_halves_gf16_into_one(bitsliced_gf16_t *destination, bitsliced_gf16_t *up_half,
                                    bitsliced_gf16_t *low_half) {
     destination->c = up_half->c | (low_half->c << 32u);
-    destination->c = up_half->y | (low_half->y << 32u);
-    destination->c = up_half->x | (low_half->x << 32u);
-    destination->c = up_half->y_x | (low_half->y_x << 32u);
+    destination->y = up_half->y | (low_half->y << 32u);
+    destination->x = up_half->x | (low_half->x << 32u);
+    destination->y_x = up_half->y_x | (low_half->y_x << 32u);
 }
 
 
@@ -101,6 +102,76 @@ void bitsliced_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_
     a_times_b->c ^= tmp;
     a_times_b->x ^= tmp;
     a_times_b->y_x ^= tmp;
+}
+
+void
+bitsliced_vectorized_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b) {
+
+    __m256i v_a_times_b_c, v_a_times_b_y, v_a_times_b_x, v_a_times_b_y_x;
+    __m256i v_a_c = {a[0].c, a[1].c, a[2].c, a[3].c};
+    __m256i v_a_y = {a[0].y, a[1].y, a[2].y, a[3].y};
+    __m256i v_a_x = {a[0].x, a[1].x, a[2].x, a[3].x};
+    __m256i v_a_y_x = {a[0].y_x, a[1].y_x, a[2].y_x, a[3].y_x};
+    __m256i v_b_c = {b[0].c, b[1].c, b[2].c, b[3].c};
+    __m256i v_b_y = {b[0].y, b[1].y, b[2].y, b[3].y};
+    __m256i v_b_x = {b[0].x, b[1].x, b[2].x, b[3].x};
+    __m256i v_b_y_x = {b[0].y_x, b[1].y_x, b[2].y_x, b[3].y_x};
+
+//
+//    v_a_times_b_c = _mm256_and_si256(v_a_c, v_b_c);
+//    v_a_times_b_y = _mm256_xor_si256(_mm256_and_si256(v_a_c, v_b_y), _mm256_and_si256(v_a_y, v_b_c));
+//    v_a_times_b_x = _mm256_xor_si256(_mm256_and_si256(v_a_c, v_b_x), _mm256_and_si256(v_a_x, v_b_c));
+//    v_a_times_b_y_x = _mm256_xor_si256(
+//            _mm256_xor_si256(_mm256_and_si256(v_a_c, v_b_y_x), _mm256_and_si256(v_a_y, v_b_x)),
+//            _mm256_xor_si256(_mm256_and_si256(v_a_x, v_b_y), _mm256_and_si256(v_a_y_x, v_b_c)));
+//
+//    __m256i tmp = _mm256_and_si256(v_a_y, v_b_y);
+//    v_a_times_b_c = _mm256_xor_si256(tmp, v_a_times_b_c);
+//    v_a_times_b_y = _mm256_xor_si256(tmp, v_a_times_b_y);
+//
+//    tmp = _mm256_and_si256(v_a_y, v_b_y_x);
+//    v_a_times_b_x = _mm256_xor_si256(tmp, v_a_times_b_x);
+//    v_a_times_b_y_x = _mm256_xor_si256(tmp, v_a_times_b_y_x);
+//
+//    tmp = _mm256_and_si256(v_a_x, v_b_x);
+//    v_a_times_b_y = _mm256_xor_si256(tmp, v_a_times_b_y);
+//    v_a_times_b_x = _mm256_xor_si256(tmp, v_a_times_b_x);
+//
+//    tmp = _mm256_and_si256(v_a_x, v_b_y_x);
+//    v_a_times_b_c = _mm256_xor_si256(tmp, v_a_times_b_c);
+//    v_a_times_b_y = _mm256_xor_si256(tmp, v_a_times_b_y);
+//    v_a_times_b_y_x = _mm256_xor_si256(tmp, v_a_times_b_y_x);
+//
+//    tmp = _mm256_and_si256(v_a_y_x, v_b_y);
+//    v_a_times_b_x = _mm256_xor_si256(tmp, v_a_times_b_x);
+//    v_a_times_b_y_x = _mm256_xor_si256(tmp, v_a_times_b_y_x);
+//
+//    tmp = _mm256_and_si256(v_a_y_x, v_b_x);
+//    v_a_times_b_c = _mm256_xor_si256(tmp, v_a_times_b_c);
+//    v_a_times_b_y = _mm256_xor_si256(tmp, v_a_times_b_y);
+//    v_a_times_b_y_x = _mm256_xor_si256(tmp, v_a_times_b_y_x);
+//
+//    tmp = _mm256_and_si256(v_a_y_x, v_b_y_x);
+//    v_a_times_b_c = _mm256_xor_si256(tmp, v_a_times_b_c);
+//    v_a_times_b_x = _mm256_xor_si256(tmp, v_a_times_b_x);
+//    v_a_times_b_y_x = _mm256_xor_si256(tmp, v_a_times_b_y_x);
+
+    a_times_b[0].c = v_a_times_b_c[0];
+    a_times_b[1].c = v_a_times_b_c[1];
+    a_times_b[2].c = v_a_times_b_c[2];
+    a_times_b[3].c = v_a_times_b_c[3];
+    a_times_b[0].y = v_a_times_b_y[0];
+    a_times_b[1].y = v_a_times_b_y[1];
+    a_times_b[2].y = v_a_times_b_y[2];
+    a_times_b[3].y = v_a_times_b_y[3];
+    a_times_b[0].x = v_a_times_b_x[0];
+    a_times_b[1].x = v_a_times_b_x[1];
+    a_times_b[2].x = v_a_times_b_x[2];
+    a_times_b[3].x = v_a_times_b_x[3];
+    a_times_b[0].y_x = v_a_times_b_y_x[0];
+    a_times_b[1].y_x = v_a_times_b_y_x[1];
+    a_times_b[2].y_x = v_a_times_b_y_x[2];
+    a_times_b[3].y_x = v_a_times_b_y_x[3];
 }
 
 void bitsliced_square(bitsliced_gf16_t *a_square, bitsliced_gf16_t *a) {

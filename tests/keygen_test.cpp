@@ -261,7 +261,7 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
-    int total_iterations = 100;
+    int total_iterations = 10000;
     set_32x32_gf16_matrix_to_identity(identity);
     unsigned int dummy;
     unsigned long long t1, t2, total = 0;
