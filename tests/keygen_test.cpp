@@ -248,7 +248,7 @@ TEST(keygen, guassian_elimination_32x32_gf16_matrices) {
             mask <<= 1u;
         }
     }
-    printf("%f \n", (double) total / total_iterations);
+    printf("Gaussian elimination: %.2f \n", (double) total / total_iterations);
 }
 
 
@@ -261,7 +261,7 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
     int i, j;
-    int total_iterations = 10000;
+    int total_iterations = 100;
     set_32x32_gf16_matrix_to_identity(identity);
     unsigned int dummy;
     unsigned long long t1, t2, total = 0;
@@ -283,7 +283,7 @@ TEST(keygen, multiply_32x32_gf16_matrices) {
             EXPECT_EQ(a[i].y_x, a_times_b[i].y_x);
         }
     }
-    printf("matrix mul: %f \n", (double) total / total_iterations);
+    printf("matrix mul: %.2f \n", (double) total / total_iterations);
 }
 
 TEST(keygen, generate_private_key) {
@@ -345,7 +345,7 @@ TEST(keygen, generate_private_key) {
         EXPECT_NE(first_layer_accumulator, 0);
         EXPECT_NE(second_layer_accumulator, 0);
     }
-    printf("private key gen: %f \n", (double) total / total_iterations);
+    printf("private key gen: %.2f \n", (double) total / total_iterations);
 }
 
 TEST(keygen, derive_public_key_from_private_key) {
@@ -379,7 +379,7 @@ TEST(keygen, derive_public_key_from_private_key) {
         EXPECT_NE(mq_accumulator, 0);
         EXPECT_NE(mp_accumulator, 0);
     }
-    printf("public key gen: %f \n", (double) total / total_iterations);
+    printf("public key gen: %.2f \n", (double) total / total_iterations);
 }
 
 TEST(keygen, replace_variable_by_linear_combination_in_quadratic_polynomial) {
@@ -399,7 +399,7 @@ TEST(keygen, replace_variable_by_linear_combination_in_quadratic_polynomial) {
     replace_variable_by_linear_combination_in_quadratic_polynomial(&f_prime, &f, 0, &linear_combination);
     t2 = __rdtscp(&dummy);
     total += t2 - t1;
-    printf("replace variables: %f \n", (double) total * 32);
+    printf("replace variables: %.2f \n", (double) total * 32);
     int i;
     int next_square_coeff = 32 * N - (32 * 33) / 2 + 32;
     int square_coeff_left = 64;

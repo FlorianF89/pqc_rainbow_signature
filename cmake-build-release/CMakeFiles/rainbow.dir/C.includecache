@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/error_codes.h
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.h
+stdint.h
+-
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.c
+memory.h
+-
+time.h
+-
+keygen.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.h
+utils_prng.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.h
+error_codes.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/error_codes.h
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.h
+gf16.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.h
+parameters.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/parameters.h
+utils_prng.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.h
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/parameters.h
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.h
+stdio.h
+-
+
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.h
+rng.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.h
+hash_utils.h
+/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/hash_utils.h
+

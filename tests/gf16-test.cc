@@ -102,15 +102,15 @@ TEST(gf16, compare_vectorized) {
         t2 = __rdtscp(&dummy);
         total += t2 - t1;
     }
-    printf("non vec mul: %.2fcc\n", total / 1000000.0);
-    total = 0;
-    for (i = 0; i < 1000000; i++) {
-        t1 = __rdtscp(&dummy);
-        bitsliced_vectorized_multiplication(a_times_b, a, b);
-        t2 = __rdtscp(&dummy);
-        total += t2 - t1;
-    }
-    printf("vec mul: %.2fcc\n", total / 1000000.0);
+    printf("non vec mul: %.2fcc\n", (double) total / 1000000.0);
+//    total = 0;
+//    for (i = 0; i < 1000000; i++) {
+//        t1 = __rdtscp(&dummy);
+//        bitsliced_vectorized_multiplication(a_times_b, a, b);
+//        t2 = __rdtscp(&dummy);
+//        total += t2 - t1;
+//    }
+//    printf("vec mul: %.2fcc\n", total / 1000000.0);
 }
 
 int main(int argc, char **argv) {

@@ -1,7 +1,12 @@
 #include "../lib/gf16.h"
 #include "timing-functions.h"
 #include "../lib/keygen.h"
+#include "../lib/sign.h"
+#include "../lib/verify.h"
 #include <stdio.h>
+#include <x86intrin.h>
+#include <string.h>
+#include <time.h>
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
     int is_first = 0;
@@ -36,64 +41,74 @@ static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position
 }
 
 int main(int argc, char **argv) {
-    bitsliced_gf16_t i, j, i_times_j, result, i_square;
+    private_key_t private_key;
+    memset(&private_key, 0x00, sizeof(private_key));
+    public_key_t public_key;
+    memset(&public_key, 0x00, sizeof(public_key));
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    int i, j;
+    int total_iterations = 100;
+    unsigned int dummy;
+    unsigned long long t1, t2, total = 0;
+    clock_t begin = clock();
+    for (j = 0; j < total_iterations; j++) {
+        generate_private_key(&private_key, &prng);
+//        t1 = __rdtscp(&dummy);
+        derive_public_key_from_private_key(&public_key, &private_key);
+//        t2 = __rdtscp(&dummy);
+//        total += t2 - t1;
+    }
+    clock_t end = clock();
+    clock_t time_spent = end - begin;
+    printf("generate_keypair = %.2f\n", (double) time_spent / total_iterations);
 
-    i.c = 0xFFFF0000FFFF0000u;
-    i.y = 0xFFFFFFFF00000000u;
-    i.x = 0;
-    i.y_x = 0;
-    j.c = 0xAAAAAAAAAAAAAAAAu;
-    j.y = 0xCCCCCCCCCCCCCCCCu;
-    j.x = 0xf0f0f0f0f0f0f0f0u;
-    j.y_x = 0xff00ff00ff00ff00u;
+    bitsliced_gf16_t signature[2];
+    memset(signature, 0x00, sizeof(signature));
 
-    i_times_j.c = 0x6666CCCCAAAA0000u;
-    i_times_j.y = 0xAAAA6666CCCC0000u;
-    i_times_j.x = 0xff0ff00f0f00000u;
-    i_times_j.y_x = 0xf0f00ff0ff000000u;
+    uint8_t message[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    memset(message, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
 
-    bitsliced_multiplication(&result, &i, &j);
 
-    i.c = 0xAAAA;
-    i.y = 0xCCCC;
-    i.x = 0xF0F0;
-    i.y_x = 0xFF00;
+    total = 0;
+    begin = clock();
+    for (i = 0; i < total_iterations; i++) {
+//        t1 = __rdtscp(&dummy);
+        rainbow_sign(signature, &private_key, message, &prng, SECRET_KEY_SEED_BYTE_LENGTH);
+//        t2 = __rdtscp(&dummy);
+//        total += t2 - t1;
+    }
+    end = clock();
+    time_spent = end - begin;
+    printf("generate_keypair = %.2f\n", (double) time_spent / total_iterations);
+//    printf("full sign: %.2fcc\n", (double) total / total_iterations);
 
-    i_square.c = 0x9966;
-    i_square.y = 0x3C3C;
-    i_square.x = 0xFF0;
-    i_square.y_x = 0xFF00;
+    bitsliced_gf16_t x0_x63, x64_x95, evaluation;
+    bitsliced_quadratic_polynomials_t f;
 
-    bitsliced_square(&result, &i);
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_gen(&prng, (uint8_t *) &x0_x63, sizeof(bitsliced_gf16_t));
 
-    bitsliced_gf16_t i_inverse, ones;
-
-    //test all elements of GF16
-    i.c = 0xAAAA;
-    i.y = 0xCCCC;
-    i.x = 0xF0F0;
-    i.y_x = 0xFF00;
-
-    ones.c = 0xFFFF;
-    ones.y = 0;
-    ones.x = 0;
-    ones.y_x = 0;
-
-    bitsliced_inversion(&i_inverse, &i);
-    bitsliced_multiplication(&result, &i, &i_inverse);
-
-    unsigned int b;
-    for (b = 0; b < 16; b++) {
-        print_bitsliced(i, b);
-        printf(" inverse = ");
-        print_bitsliced(i_inverse, b);
-        printf(". Result of multiplication is = ");
-        print_bitsliced(result, b);
-        putchar(10);
+    for (i = 0; i < N * (N + 1) / 2; i++) {
+        prng_gen(&prng, (uint8_t *) &f.coefficients[i], sizeof(bitsliced_gf16_t));
     }
 
-    char t[2][O1];
-    generate_random_matrix_t(t, NULL);
-
+    total = 0;
+    begin = clock();
+    for (i = 0; i < total_iterations; i++) {
+//        t1 = __rdtscp(&dummy);
+        evaluate_quadratic_polynomials(&evaluation, &f, &x0_x63, &x64_x95);
+//        t2 = __rdtscp(&dummy);
+//        total += t2 - t1;
+    }
+    end = clock();
+    time_spent = end - begin;
+    printf("generate_keypair = %.2f\n", (double) time_spent / total_iterations);
+//    printf("verify: %.2fcc\n", (double) (total) / total_iterations);
     return 0;
 }

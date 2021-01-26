@@ -259,7 +259,6 @@ void set_32x32_gf16_matrix_to_identity(bitsliced_gf16_t a[32]) {
 
 void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16_t a[32], bitsliced_gf16_t b[32]) {
 
-    //TODO optimize to use the 64bits per words
     bitsliced_gf16_t a_transposed[32];
     bitsliced_gf16_t tmp, tmp1, tmp2;
     transpose_32x32_gf16_matrix(a_transposed, a);
@@ -269,6 +268,10 @@ void multiply_32x32_gf16_matrices(bitsliced_gf16_t a_times_b[32], bitsliced_gf16
         move_two_halves_gf16_into_one(&tmp1, &a_transposed[2 * i], &a_transposed[2 * i + 1]);
         for (j = 0; j < 32; j++) {
             move_two_halves_gf16_into_one(&tmp2, &b[j], &b[j]);
+//            tmp2.c = b[j].c * 0x100000001lu;
+//            tmp2.y = b[j].y * 0x100000001lu;
+//            tmp2.x = b[j].x * 0x100000001lu;
+//            tmp2.y_x = b[j].y_x * 0x100000001lu;
             bitsliced_multiplication(&tmp, &tmp2, &tmp1);
             bitsliced_gf16_sum_two_halves_and_place_results_in_given_positions(&tmp2, &tmp, 2 * i, 2 * i + 1);
             bitsliced_addition(&a_times_b[j], &a_times_b[j], &tmp2);

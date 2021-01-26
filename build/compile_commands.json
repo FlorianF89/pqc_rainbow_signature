@@ -1,0 +1,151 @@
+[
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/pqc_rainbow.dir/src/main/timing-functions.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/timing-functions.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/timing-functions.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/pqc_rainbow.dir/src/main/signature_system.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/signature_system.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/signature_system.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/gf16.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/keygen.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/rng.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/utils_prng.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/utils_hash.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_hash.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_hash.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/sign.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/sign.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/sign.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -isystem /usr/local/include  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o CMakeFiles/rainbow.dir/src/lib/verify.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/verify.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/verify.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu++14 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/tests/gf16-test.cc.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/gf16-test.cc",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/gf16-test.cc"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/gf16.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/gf16.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/verify.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/verify.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/verify.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/main/timing-functions.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/timing-functions.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/main/timing-functions.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/keygen.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/keygen.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/rng.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/rng.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/utils_hash.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_hash.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_hash.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/utils_prng.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/utils_prng.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu++14 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/tests/keygen_test.cpp.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/keygen_test.cpp",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/keygen_test.cpp"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/gcc-10  -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu99 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/src/lib/sign.c.o   -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/sign.c",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/src/lib/sign.c"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu++14 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/tests/sign_test.cpp.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/sign_test.cpp",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/sign_test.cpp"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I../Google_tests/src/lib -isystem /usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -std=gnu++14 -o Google_tests/CMakeFiles/Google_Tests_run.dir/__/tests/verify_test.cpp.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/verify_test.cpp",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/tests/verify_test.cpp"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I/usr/local/include -I../Google_tests/lib/googlemock/include -I../Google_tests/lib/googlemock -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -Wall -Wshadow -Werror -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -std=c++14 -o Google_tests/lib/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googlemock/src/gmock-all.cc",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googlemock/src/gmock-all.cc"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I/usr/local/include -isystem ../Google_tests/lib/googlemock/include -isystem ../Google_tests/lib/googlemock -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -Wall -Wshadow -Werror -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -std=c++14 -o Google_tests/lib/googlemock/CMakeFiles/gmock_main.dir/src/gmock_main.cc.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googlemock/src/gmock_main.cc",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googlemock/src/gmock_main.cc"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I/usr/local/include -isystem ../Google_tests/lib/googletest/include -isystem ../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -Wall -Wshadow -Werror -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -std=c++14 -o Google_tests/lib/googletest/CMakeFiles/gtest_main.dir/src/gtest_main.cc.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googletest/src/gtest_main.cc",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googletest/src/gtest_main.cc"
+},
+
+{
+  "directory": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/build",
+  "command": "/usr/local/bin/g++-10   -I/usr/local/include -I../Google_tests/lib/googletest/include -I../Google_tests/lib/googletest  -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk   -Wall -Wshadow -Werror -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -std=c++14 -o Google_tests/lib/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o -c /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googletest/src/gtest-all.cc",
+  "file": "/Users/floriancaullery/CLionProjects/pqc_rainbow_signature/Google_tests/lib/googletest/src/gtest-all.cc"
+}
+]

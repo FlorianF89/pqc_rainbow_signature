@@ -26,17 +26,22 @@ void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bit
 
     bitsliced_gf16_t tmp, tmp1;
     for (i = 0; i < 32; i++) {
+        tmp1.c = 0;
+        tmp1.y = 0;
+        tmp1.x = 0;
+        tmp1.y_x = 0;
         for (j = i; j < 32; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            bitsliced_multiplication(&tmp, &x0_to_x31_expanded[i], &x0_to_x31_expanded[j]);
-            bitsliced_multiplication(&tmp1, &tmp, &f->coefficients[position]);
-            bitsliced_addition(evaluations, evaluations, &tmp1);
+            bitsliced_multiplication(&tmp, &f->coefficients[position], &x0_to_x31_expanded[j]);
+            bitsliced_addition(&tmp1, &tmp, &tmp1);
         }
+        bitsliced_multiplication(&tmp, &tmp1, &x0_to_x31_expanded[i]);
+        bitsliced_addition(evaluations, evaluations, &tmp1);
     }
 }
 
 void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
-                                              bitsliced_gf16_t *x0_x63) {
+                                              bitsliced_gf16_t *x0_x63, bitsliced_gf16_t *evaluation_in_x0_x32) {
     unsigned int i, j;
     bitsliced_gf16_t x0_to_x63_expanded[64];
     for (i = 0; i < 64; i++) {
@@ -53,13 +58,19 @@ void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bit
 
     bitsliced_gf16_t tmp, tmp1;
     for (i = 0; i < 64; i++) {
-        for (j = i; j < 64; j++) {
+        tmp1.c = 0;
+        tmp1.y = 0;
+        tmp1.x = 0;
+        tmp1.y_x = 0;
+        for (j = (i < 32) ? 32 : i; j < 64; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            bitsliced_multiplication(&tmp, &x0_to_x63_expanded[i], &x0_to_x63_expanded[j]);
-            bitsliced_multiplication(&tmp1, &tmp, &f->coefficients[position]);
-            bitsliced_addition(evaluations, evaluations, &tmp1);
+            bitsliced_multiplication(&tmp, &f->coefficients[position], &x0_to_x63_expanded[j]);
+            bitsliced_addition(&tmp1, &tmp, &tmp1);
         }
+        bitsliced_multiplication(&tmp, &tmp1, &x0_to_x63_expanded[i]);
+        bitsliced_addition(evaluations, evaluations, &tmp1);
     }
+    bitsliced_addition(evaluations, evaluation_in_x0_x32, &tmp1);
 }
 
 void evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(bitsliced_gf16_t *evaluations,
@@ -87,12 +98,17 @@ void evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(bitsliced_gf16_t *
 
     bitsliced_gf16_t tmp, tmp1;
     for (i = 0; i < 64; i++) {
+        tmp1.c = 0;
+        tmp1.y = 0;
+        tmp1.x = 0;
+        tmp1.y_x = 0;
         for (j = i; j < 96; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            bitsliced_multiplication(&tmp, &x0_to_x95_expanded[i], &x0_to_x95_expanded[j]);
-            bitsliced_multiplication(&tmp1, &tmp, &f->coefficients[position]);
-            bitsliced_addition(evaluations, evaluations, &tmp1);
+            bitsliced_multiplication(&tmp, &f->coefficients[position], &x0_to_x95_expanded[j]);
+            bitsliced_addition(&tmp1, &tmp, &tmp1);
         }
+        bitsliced_multiplication(&tmp, &tmp1, &x0_to_x95_expanded[i]);
+        bitsliced_addition(evaluations, evaluations, &tmp1);
     }
 }
 
@@ -268,7 +284,7 @@ int find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(bitsliced_gf16_t 
     bitsliced_gf16_t tmp, accumulator;
     bitsliced_gf16_t linear_system[32];
     memset(linear_system, 0x00, sizeof(linear_system));
-    evaluate_quadratic_polynomials_at_x0_x63(&accumulator, f, y0_y64);
+    evaluate_quadratic_polynomials_at_x0_x63(&accumulator, f, y0_y64, evaluation_in_x0_x31);
     bitsliced_addition(&accumulator, x0_x64, &accumulator);
     bitsliced_gf16_t y0_y63_expanded[64];
     for (i = 0; i < 64; i++) {
@@ -330,8 +346,8 @@ int rainbow_sign(bitsliced_gf16_t *signature, private_key_t *private_key, uint8_
                                                                                        &x, prng);
 
         signature_succeeded *= find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(&signature[1],
-                                                                                         &private_key->mq_polynomials,
-                                                                                         &signature[0], &x, &tmp);
+                                                                                          &private_key->mq_polynomials,
+                                                                                          &signature[0], &x, &tmp);
         attempt++;
     }
     shift_right_gf16(&tmp, &signature[0], 32);

@@ -104,8 +104,42 @@ void bitsliced_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_
     a_times_b->y_x ^= tmp;
 }
 
-void
-bitsliced_vectorized_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b) {
+void bitsliced_muladd(bitsliced_gf16_t *a_times_b_plus_c, const bitsliced_gf16_t *a, const bitsliced_gf16_t *b) {
+    a_times_b_plus_c->c ^= (a->c & b->c) ^ (a->y & b->y) ^  (a->y_x & b->x) ^ (b->y_x & (a->y_x  ^ a->y ^a->x));
+    a_times_b_plus_c->y ^= (a->c & b->y) ^ (a->y ^ (b->c ^ b->y)) ^ (a->x & (b->x ^ b->y_x)) ^ (a->y_x & b->x);
+    a_times_b_plus_c->x ^= (a->c & b->x) ^ (a->x & (b->c & b->x)) ^ (a->y_x & (b->y ^ b->y_x));
+    a_times_b_plus_c->y_x ^= (a->c & b->y_x) ^ (a->y & (b->x ^ b->y_x)) ^ (a->x & (b->y ^ b->y_x)) ^ (a->y_x & (b->c ^ b->y ^ b->x ^ b->y_x));
+}
+
+
+
+static __inline__ unsigned long long rdtsc(void)
+{
+  unsigned long long int x;
+     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
+     return x;
+}
+
+
+
+void _gf16v_madd_u32(bitsliced_gf16_t *accu_c, const bitsliced_gf16_t *a, uint8_t gf16_b, unsigned _num_byte){
+
+    bitsliced_gf16_t b;
+
+    b.c = 0 - ((gf16_b)& 0x01);
+    b.x = 0 - ((gf16_b >> 1)& 0x01);
+    b.y = 0 - ((gf16_b >> 2)& 0x01);
+    b.y_x = 0 - ((gf16_b >> 3)& 0x01);
+
+    for (int i = 0; i < (_num_byte + 31) / 32; ++i)
+    {
+        bitsliced_muladd(&accu_c[i], &a[i], &b);
+    }
+}
+
+
+void bitsliced_vectorized_multiplication(bitsliced_gf16_t *a_times_b, const bitsliced_gf16_t *a,
+                                         const bitsliced_gf16_t *b) {
 
     __m256i v_a_times_b_c, v_a_times_b_y, v_a_times_b_x, v_a_times_b_y_x;
     __m256i v_a_c = {a[0].c, a[1].c, a[2].c, a[3].c};
@@ -217,4 +251,32 @@ void bitsliced_inversion(bitsliced_gf16_t *a_inverse, bitsliced_gf16_t *a) {
     a_inverse->y_x ^= tmp3;
 
     a_inverse->c ^= tmp2 & a->c;
+}
+
+
+
+int main(){
+
+    bitsliced_gf16_t a, c;
+    int byte_count = 8;
+    FILE *fp;
+    fp = fopen("/dev/urandom", "rb");
+    fread(&a.c, 1, byte_count, fp);
+    fread(&a.x, 1, byte_count, fp);
+    fread(&a.y, 1, byte_count, fp);
+    fread(&a.y_x, 1, byte_count, fp);
+    fclose(fp);
+    uint8_t b[4];
+
+	clock_t start_t = clock();
+	unsigned long ctr = 0;
+	while(((clock() - start_t) / CLOCKS_PER_SEC) < 1){
+		_gf16v_madd_u32(&c, &a, b[0], 4);
+		_gf16v_madd_u32(&c, &a, b[1], 4);
+		_gf16v_madd_u32(&c, &a, b[2], 4);
+		_gf16v_madd_u32(&c, &a, b[3], 4);
+		ctr++;
+	}
+	printf("opcount %ld\n", ctr * 256);
+    return 0;
 }

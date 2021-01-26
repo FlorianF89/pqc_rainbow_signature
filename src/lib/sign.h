@@ -13,7 +13,7 @@ void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bit
                                               bitsliced_gf16_t *x0_x31);
 
 void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
-                                              bitsliced_gf16_t *x0_x63);
+                                              bitsliced_gf16_t *x0_x63, bitsliced_gf16_t *evaluation_in_x0_x32);
 
 
 void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, bitsliced_gf16_t f[32][64],

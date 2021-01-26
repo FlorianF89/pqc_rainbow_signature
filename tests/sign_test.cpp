@@ -6,7 +6,12 @@
 #include "gtest/gtest.h"
 #include "../src/lib/error_codes.h"
 #include <x86intrin.h>
+#include <chrono>
 
+template<class T>
+__attribute__((always_inline)) inline void DoNotOptimize(const T &value) {
+    asm volatile("" : "+m"(const_cast<T &>(value)));
+}
 
 extern "C" {
 #include "../src/main/timing-functions.h"
@@ -16,6 +21,39 @@ extern "C" {
 #include "../src/lib/rng.h"
 #include "../src/lib/sign.h"
 #include "../src/lib/gf16.h"
+}
+
+auto time_sign() {
+
+    private_key_t private_key;
+
+    bitsliced_gf16_t signature[2];
+    memset(signature, 0x00, sizeof(signature));
+
+    uint8_t seed[SECRET_KEY_SEED_BYTE_LENGTH];
+    uint8_t message[SECRET_KEY_SEED_BYTE_LENGTH];
+    memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    memset(message, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
+    prng_t prng;
+    prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
+
+    int i;
+
+
+    using Clock = std::chrono::high_resolution_clock;
+
+    auto input = SECRET_KEY_SEED_BYTE_LENGTH;
+
+    auto t1 = Clock::now();         // Statement 1
+    DoNotOptimize(input);
+    auto output = 0;
+    for (i = 0; i < 20; i++) {
+        output = rainbow_sign(signature, &private_key, message, &prng, input);
+    }
+    DoNotOptimize(output);
+    auto t2 = Clock::now();         // Statement 3
+
+    return t2 - t1;
 }
 
 TEST(sign_tests, evaluate_quadratic_polynomials_at_x0_x31) {
@@ -50,7 +88,7 @@ TEST(sign_tests, evaluate_quadratic_polynomials_at_x0_x31) {
 }
 
 TEST(sign_tests, evaluate_quadratic_polynomials_at_x0_x63) {
-    bitsliced_gf16_t x0_x63, evaluation;
+    bitsliced_gf16_t x0_x63, evaluation, eval_x0_x31;
     memset(&evaluation, 0xFF, sizeof(bitsliced_gf16_t));
     x0_x63.c = -1;
     x0_x63.y = 0;
@@ -72,7 +110,8 @@ TEST(sign_tests, evaluate_quadratic_polynomials_at_x0_x63) {
             bitsliced_addition(&accumulator, &accumulator, &f.coefficients[position]);
         }
     }
-    evaluate_quadratic_polynomials_at_x0_x63(&evaluation, &f, &x0_x63);
+    evaluate_quadratic_polynomials_at_x0_x31(&eval_x0_x31, &f, &x0_x63);
+    evaluate_quadratic_polynomials_at_x0_x63(&evaluation, &f, &x0_x63, &eval_x0_x31);
     bitsliced_addition(&evaluation, &evaluation, &accumulator);
     EXPECT_EQ(evaluation.c, 0);
     EXPECT_EQ(evaluation.y, 0);
@@ -96,7 +135,7 @@ TEST(sign_tests, solve_32x32_gf16_system) {
     clock_t t, total = 0;
     int iterations = 0;
     while (has_solution == 0) {
-        prng_gen(&prng, (uint8_t *) &linear_coefficients, sizeof(bitsliced_gf16_t));
+        prng_gen(&prng, (uint8_t * ) & linear_coefficients, sizeof(bitsliced_gf16_t));
         linear_coefficients.c &= 0xFFFFFFFFlu;
         linear_coefficients.y &= 0xFFFFFFFFlu;
         linear_coefficients.x &= 0xFFFFFFFFlu;
@@ -112,7 +151,7 @@ TEST(sign_tests, solve_32x32_gf16_system) {
         total += clock() - t;
         iterations++;
     }
-    printf("solve: %lucc\n", total / iterations);
+    printf("solve_32x32_gf16_system: %lucc\n", total / iterations);
     bitsliced_gf16_t g[32], verif[32];
     for (i = 0; i < 32; i++) {
         copy_gf16(&g[i], &solution);
@@ -133,7 +172,7 @@ TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
     memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
-    prng_gen(&prng, (uint8_t *) &x0_x31, sizeof(bitsliced_gf16_t));
+    prng_gen(&prng, (uint8_t * ) & x0_x31, sizeof(bitsliced_gf16_t));
     x0_x31.c &= 0xFFFFFFFFlu;
     x0_x31.y &= 0xFFFFFFFFlu;
     x0_x31.x &= 0xFFFFFFFFlu;
@@ -144,18 +183,18 @@ TEST(sign_tests, find_preimage_of_x0_x31_by_32_polynomials_in_64_variables) {
     for (i = 0; i < 32; i++) {
         for (j = i; j < 64; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            prng_gen(&prng, (uint8_t * ) & f.coefficients[position], sizeof(bitsliced_gf16_t));
         }
     }
 
     unsigned int dummy;
     unsigned long long t1 = __rdtscp(&dummy);
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < 10; i++) {
         find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(&y0_y63, &evaluation_in_x0_x31, &f, &x0_x31, &prng);
     }
     unsigned long long t2 = __rdtscp(&dummy);
-    std::cout << "Time: " << (t2 - t1) / 10 << std::endl;
-    evaluate_quadratic_polynomials_at_x0_x63(&x0_x31_prime, &f, &y0_y63);
+    std::cout << "find_preimage_of_x0_x31_by_32_polynomials_of_first_layer: " << (t2 - t1) / 10 << std::endl;
+    evaluate_quadratic_polynomials_at_x0_x63(&x0_x31_prime, &f, &y0_y63, &evaluation_in_x0_x31);
     bitsliced_addition(&x0_x31_prime, &x0_x31_prime, &x0_x31);
     EXPECT_EQ(gf16_is_zero(x0_x31_prime, 0), 1);
 }
@@ -170,7 +209,7 @@ TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
     memset(seed, 0x00, SECRET_KEY_SEED_BYTE_LENGTH);
     prng_t prng;
     prng_set(&prng, seed, SECRET_KEY_SEED_BYTE_LENGTH);
-    prng_gen(&prng, (uint8_t *) &x0_x63, sizeof(bitsliced_gf16_t));
+    prng_gen(&prng, (uint8_t * ) & x0_x63, sizeof(bitsliced_gf16_t));
 
     int i, j;
     memset(&f, 0x00, sizeof(f));
@@ -178,11 +217,11 @@ TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
     for (i = 0; i < 32; i++) {
         for (j = i; j < 64; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            prng_gen(&prng, (uint8_t * ) & f.coefficients[position], sizeof(bitsliced_gf16_t));
         }
         for (j = 64; j < 96; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            prng_gen(&prng, (uint8_t * ) & f.coefficients[position], sizeof(bitsliced_gf16_t));
             shift_left_gf16(&f.coefficients[position], &f.coefficients[position], 32);
         }
     }
@@ -190,7 +229,7 @@ TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
     for (i = 32; i < 64; i++) {
         for (j = i; j < 96; j++) {
             int position = i * N - ((i + 1) * i / 2) + j;
-            prng_gen(&prng, (uint8_t *) &f.coefficients[position], sizeof(bitsliced_gf16_t));
+            prng_gen(&prng, (uint8_t * ) & f.coefficients[position], sizeof(bitsliced_gf16_t));
             shift_left_gf16(&f.coefficients[position], &f.coefficients[position], 32);
         }
     }
@@ -206,8 +245,7 @@ TEST(sign_tests, find_preimage_of_x64_x96_by_32_polynomials_of_second_layer) {
         unsigned long long t2 = __rdtscp(&dummy);
         total += t2 - t1;
     }
-    printf("sign: %.2fcc\n", total / 20.0);
-    std::cout << "sign: " << total / 20.0 << std::endl;
+    printf("find_preimage_of_x64_x96_by_32_polynomials_of_second_layer: %.2fcc\n", total / 20.0);
     evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(&x0_x63_prime, &f, &y0_y63, &y64_y95);
     bitsliced_addition(&x0_x63_prime, &x0_x63_prime, &x0_x63);
     EXPECT_EQ(return_value, 1);
@@ -231,17 +269,7 @@ TEST(sign_tests, rainbow_sign) {
 
     ASSERT_EQ(generate_private_key(&private_key, &prng), SUCCESS);
     EXPECT_EQ(rainbow_sign(signature, &private_key, message, &prng, SECRET_KEY_SEED_BYTE_LENGTH), SUCCESS);
-
-    int i;
-
-    unsigned int dummy;
-    unsigned long long total = 0, t1, t2;
-    for (i = 0; i < 20; i++) {
-        t1 = __rdtscp(&dummy);
-        rainbow_sign(signature, &private_key, message, &prng, SECRET_KEY_SEED_BYTE_LENGTH);
-        t2 = __rdtscp(&dummy);
-        total += t2 - t1;
-    }
-    printf("full sign: %.2fcc\n", total / 20.0);
+    auto total = time_sign();
+    printf("rainbow_sign: %.2fcc\n", total / 20.0);
 }
 
