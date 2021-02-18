@@ -9,34 +9,10 @@
 #include "utils_prng.h"
 #include "keygen.h"
 
-void evaluate_quadratic_polynomials_at_x0_x31(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
-                                              bitsliced_gf16_t *x0_x31);
 
-void evaluate_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluations, bitsliced_quadratic_polynomials_t *f,
-                                              bitsliced_gf16_t *x0_x63, bitsliced_gf16_t *evaluation_in_x0_x32);
+void print_32x32_gf16_system(bitsliced_gf16_t m[32], bitsliced_gf16_t solution);
 
-
-void evaluate_32_quadratic_polynomials_at_x0_x63(bitsliced_gf16_t *evaluation, bitsliced_gf16_t f[32][64],
-                                                 bitsliced_gf16_t *x0_x63);
-
-int solve_32x32_gf16_system(bitsliced_gf16_t *solution, bitsliced_gf16_t equations_coefficients[32],
-                            bitsliced_gf16_t *linear_coefficients);
-
-void evaluate_quadratic_polynomials_of_second_layer_at_x0_x95(bitsliced_gf16_t *evaluations,
-                                                              bitsliced_quadratic_polynomials_t *f,
-                                                              bitsliced_gf16_t *x0_x63, bitsliced_gf16_t *x64_x95);
-
-int find_preimage_of_x0_x31_by_32_polynomials_of_first_layer(bitsliced_gf16_t *preimages,
-                                                             bitsliced_gf16_t *evaluation_in_x0_x31,
-                                                             bitsliced_quadratic_polynomials_t *f,
-                                                             bitsliced_gf16_t *x0_x31, prng_t *prng);
-
-int find_preimage_of_x64_x96_by_32_polynomials_of_second_layer(bitsliced_gf16_t *y64_y96,
-                                                               bitsliced_quadratic_polynomials_t *f,
-                                                               bitsliced_gf16_t *y0_y64, bitsliced_gf16_t *x0_x64,
-                                                               bitsliced_gf16_t *evaluation_in_x0_x31);
-
-int rainbow_sign(bitsliced_gf16_t *signature, private_key_t *private_key, uint8_t *message, prng_t *prng,
-                 uint64_t message_length);
+int solve_32x32_gf16_system(bitsliced_gf16_t solution, bitsliced_gf16_t equations_coefficients[32],
+                            bitsliced_gf16_t linear_coefficients);
 
 #endif //PQC_RAINBOW_SIGN_H
