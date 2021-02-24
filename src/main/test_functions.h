@@ -20,6 +20,8 @@ int test_multiply_y_by_t();
 
 int test_invert_t();
 
-int test_variable_substitution_full();
+int test_variable_substitution_first_layer();
+
+int test_variable_substitution_second_layer();
 
 #endif

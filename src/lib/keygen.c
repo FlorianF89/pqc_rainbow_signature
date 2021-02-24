@@ -9,7 +9,16 @@
 #include "utils_prng.h"
 #include "error_codes.h"
 
-#define ELMTS_IN_BITSLICED 64
+
+
+static inline uint64_t bit_parity(uint64_t v){
+    v ^= v >> 32;
+    v ^= v >> 16;
+    v ^= v >> 8;
+    v ^= v >> 4;
+    v &= 0xf;
+    return (0x6996 >> v) & 1;
+}
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
     if ((in[0] >> bit_position) & 0x01u) {
@@ -186,412 +195,241 @@ static void inline bitsliced_rol_32(bitsliced_gf16_t in, unsigned int r){
             | ((in[3] << c) & 0xFFFFFFFFu) | ((in[3] & 0xFFFFFFFFu) >> (unsigned) ((ELMTS_IN_BITSLICED / 2) - c));
 }
 
-//Multiply and put in place for variale change for x_i x_j with i,j in V1
-// Writing x_i -> x_i + a_o1 x_o1 + ... + a_{n - 1} x_{n - 1} and
-// x_j -> x_j + b_o1 x_o1 + ... + b_{n - 1} x_{n - 1} 
-// c will contain in order the coeffcients of [x_o1^2, ... , x_{n - 1}^2, 
-// x_o1 x*{o1 + 1}, x_{o1+1} x*{o1+2}, ... , x_{n-1} x*{o1}, x_o1 x*{o1 + 2}, x_{o1+1} x*{o1+3}, ... , x_{n-1} x*{o1 + 1}, ...]
-// (rotating fashion)
-static void inline gf16_multiply_for_variable_change_v1_v1(bitsliced_gf16_t c[NUMB_VARS_V1_CHANGE], 
-                                                            bitsliced_gf16_t a, bitsliced_gf16_t b){
+
+void variable_substitution_first_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
+                                            first_layer_polynomial_t original, 
+                                            bitsliced_gf16_t variable_list[V1 + O1]){
     
-    bitsliced_multiplication(c[0], a, b);
-    for (unsigned int var_change_idx = 1; var_change_idx < (ELMTS_IN_BITSLICED / 2) ; var_change_idx++)
-    {
-        bitsliced_ror(b, 1);
-        bitsliced_multiplication(c[var_change_idx], a, b);
-    }
-    //Treats the special case of the rotation by (ELMTS_IN_BITSLICED / 2)
-    bitsliced_ror(b, 1);
-    bitsliced_multiplication(c[(ELMTS_IN_BITSLICED / 2)], a, b);
-    c[(ELMTS_IN_BITSLICED / 2)][0] ^= c[(ELMTS_IN_BITSLICED / 2)][0] >> (ELMTS_IN_BITSLICED / 2);
-    c[(ELMTS_IN_BITSLICED / 2)][1] ^= c[(ELMTS_IN_BITSLICED / 2)][1] >> (ELMTS_IN_BITSLICED / 2);
-    c[(ELMTS_IN_BITSLICED / 2)][2] ^= c[(ELMTS_IN_BITSLICED / 2)][2] >> (ELMTS_IN_BITSLICED / 2);
-    c[(ELMTS_IN_BITSLICED / 2)][3] ^= c[(ELMTS_IN_BITSLICED / 2)][3] >> (ELMTS_IN_BITSLICED / 2);
+    memset(f_times_t, 0, 2 * NUMBER_OF_VARIABLES * sizeof(bitsliced_gf16_t));
     
-    // In this loop we have to rotate back tmp to align the coefficients with the first loop
-    bitsliced_gf16_t tmp_v1_v1;
-    for (unsigned int var_change_idx = (ELMTS_IN_BITSLICED / 2) - 1; var_change_idx > 0; var_change_idx--)
+    bitsliced_gf16_t tmp, tmp1;
+    for (size_t i = 0; i < V1; i++)
     {
-        bitsliced_ror(b, 1);
-        bitsliced_multiplication(tmp_v1_v1, a, b);
-        bitsliced_rol(tmp_v1_v1, var_change_idx);
-        bitsliced_addition(c[var_change_idx], c[var_change_idx], tmp_v1_v1);
+        copy_gf16(f_times_t[i][0], original[i][0]);
+        copy_gf16(f_times_t[i][1], original[i][1]);
+        f_times_t[i][1][0] &= 0xFFFFFFFFlu;
+        f_times_t[i][1][1] &= 0xFFFFFFFFlu;
+        f_times_t[i][1][2] &= 0xFFFFFFFFlu;
+        f_times_t[i][1][3] &= 0xFFFFFFFFlu;
     }
-    //Restores b to its original value
-    bitsliced_ror(b, 1);
+    for (size_t i = 0; i < V1; i++)
+    {   
+        for (size_t j = 0; j < V1; j++)
+        {
+            expand_bitsliced(tmp, original[i][0], j);
+            bitsliced_muladd(f_times_t[i][1], tmp, variable_list[j]);
+        }
+        for (size_t j = 0; j < O1; j++)
+        {
+            expand_bitsliced(tmp, original[i][1], j);
+            bitsliced_muladd(f_times_t[i][1], tmp, variable_list[j + V1]);
+        }
+    }
+    
+    for (size_t i = V1; i < V1 + O1; i++)
+    {   
+        expand_bitsliced(tmp, variable_list[0], i - V1);
+        bitsliced_multiplication(f_times_t[i][0], tmp, f_times_t[0][0]);
+        bitsliced_multiplication(f_times_t[i][1], tmp, f_times_t[0][1]);
+        for (size_t j = 1; j < V1; j++)
+        {
+            expand_bitsliced(tmp, variable_list[j], i - V1);
+            bitsliced_muladd(f_times_t[i][0], tmp, f_times_t[j][0]);
+            bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
+        }
+    }
+    for (size_t i = V1 + O1; i < V1 + O1 + O2; i++)
+    {   
+        expand_bitsliced(tmp, variable_list[0], i - V1);
+        bitsliced_multiplication(f_times_t[i][0], tmp, f_times_t[0][0]);
+        bitsliced_multiplication(f_times_t[i][1], tmp, f_times_t[0][1]);
+        for (size_t j = 1; j < V1; j++)
+        {
+            expand_bitsliced(tmp, variable_list[j], i - V1);
+            bitsliced_muladd(f_times_t[i][0], tmp, f_times_t[j][0]);
+            bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
+        }
+    }
+    //We leave it as is, we will proceed to the Gaussian elimination after the multiplication by S
 }
 
-#define NUMB_VARS_O1_CHANGE (((((1 + O2)*(O2))) + ELMTS_IN_BITSLICED - 1) / ELMTS_IN_BITSLICED)
-
-static void inline gf16_multiply_for_variable_change_v1_o1(bitsliced_gf16_t c[NUMB_VARS_V1_CHANGE], 
-                                                            bitsliced_gf16_t a, bitsliced_gf16_t b){
+void variable_substitution_second_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
+                                            first_layer_polynomial_t original, 
+                                            bitsliced_gf16_t variable_list[V1 + O1]){
     
-    bitsliced_gf16_t tmp_v1_o1;
-    tmp_v1_o1[0] = (b[0] >> 32u) | (b[0] & 0xFFFFFFFF00000000u);
-    tmp_v1_o1[1] = (b[1] >> 32u) | (b[1] & 0xFFFFFFFF00000000u);
-    tmp_v1_o1[2] = (b[2] >> 32u) | (b[2] & 0xFFFFFFFF00000000u);
-    tmp_v1_o1[3] = (b[3] >> 32u) | (b[3] & 0xFFFFFFFF00000000u);
-
-    bitsliced_multiplication(c[0], a, tmp_v1_o1);
-    for (unsigned int var_change_idx = 1; var_change_idx < (ELMTS_IN_BITSLICED / 2) ; var_change_idx++)
+    memset(f_times_t, 0, 2 * NUMBER_OF_VARIABLES * sizeof(bitsliced_gf16_t));
+    
+    bitsliced_gf16_t tmp, tmp1;
+    for (size_t i = 0; i < V1 + O1; i++)
     {
-        bitsliced_ror(tmp_v1_o1, 1);
-        bitsliced_multiplication(c[var_change_idx], a, tmp_v1_o1);
+        copy_gf16(f_times_t[i][0], original[i][0]);
+        copy_gf16(f_times_t[i][1], original[i][1]);
     }
-}
-
-
-static void inline gf16_double_multiply_for_variable_change_o1_o1(bitsliced_gf16_t c[NUMB_VARS_O1_CHANGE], 
-                                                            bitsliced_gf16_t a, bitsliced_gf16_t b){
-    
-    bitsliced_gf16_t tmp_o1_o1;
-    tmp_o1_o1[0] = (b[0] >> 32u) | (b[0] & 0xFFFFFFFF00000000u);
-    tmp_o1_o1[1] = (b[1] >> 32u) | (b[1] & 0xFFFFFFFF00000000u);
-    tmp_o1_o1[2] = (b[2] >> 32u) | (b[2] & 0xFFFFFFFF00000000u);
-    tmp_o1_o1[3] = (b[3] >> 32u) | (b[3] & 0xFFFFFFFF00000000u);
-    
-    unsigned int var_change_idx;
-    bitsliced_multiplication(c[0], a, tmp_o1_o1);
-    for (var_change_idx = 1; var_change_idx < (ELMTS_IN_BITSLICED / 4) ; var_change_idx++)
-    {
-        bitsliced_ror(tmp_o1_o1, 1);
-        bitsliced_multiplication(c[var_change_idx], a, tmp_o1_o1);
-    }
-    
-    bitsliced_ror(tmp_o1_o1, 1);
-    bitsliced_multiplication(c[var_change_idx], a, tmp_o1_o1);
-    c[var_change_idx][0] ^= (c[var_change_idx][0] >> 16u);
-    c[var_change_idx][1] ^= (c[var_change_idx][1] >> 16u);
-    c[var_change_idx][2] ^= (c[var_change_idx][2] >> 16u);
-    c[var_change_idx][3] ^= (c[var_change_idx][3] >> 16u);
-
-    c[var_change_idx][0] &= 0xFFFF0000FFFF;
-    c[var_change_idx][1] &= 0xFFFF0000FFFF;
-    c[var_change_idx][2] &= 0xFFFF0000FFFF;
-    c[var_change_idx][3] &= 0xFFFF0000FFFF;
-
-    bitsliced_gf16_t tmp_o1_o1_1;
-    for (unsigned int var_change_idx = (ELMTS_IN_BITSLICED / 4) - 1; var_change_idx > 0; var_change_idx--)
-    {
-        bitsliced_ror(tmp_o1_o1, 1);
-        bitsliced_multiplication(tmp_o1_o1_1, a, tmp_o1_o1);
-        bitsliced_rol_32(tmp_o1_o1_1, var_change_idx);
-        bitsliced_addition(c[var_change_idx], c[var_change_idx], tmp_o1_o1_1);
-    }
-}
-//We treat all polynomials here as if they were from the second layer
-
-int variable_substitution_full(polynomial_t transformed, polynomial_t original, bitsliced_gf16_t variable_list[V1 + O1]){
-    int i, j, k, l;
-    bitsliced_gf16_t tmp, tmp2;
-    memset(transformed, 0, sizeof(polynomial_t));
-    int count = 0;
-    int index, index1;
-    // var from x_0 to x_{v_1 - 1} are transformed into x_i = x_i + \sum_{k = V1}^{V1 + O1 + O2} a_k x_k
-    for (i = 0; i < V1; i++){
-        index = get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES);
-        bitsliced_addition(transformed[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], 
-                            transformed[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], 
-                            original[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)]);
-
-        bitsliced_square(tmp2, variable_list[i]);
-        for(j = V1; j < NUMBER_OF_VARIABLES; j++){
-            index = get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES);
-            index1 = get_square_index_in_polynomial(j, NUMBER_OF_VARIABLES);
-            expand_bitsliced(tmp, tmp2, j - V1);
-            bitsliced_muladd(transformed[get_square_index_in_polynomial(j, NUMBER_OF_VARIABLES)], 
-                            original[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], tmp);
-            count++;
+    // Multiply by T on the right
+    for (size_t i = 0; i < V1; i++)
+    {   
+        for (size_t j = 0; j < V1; j++)
+        {
+            expand_bitsliced(tmp, original[i][0], j);
+            bitsliced_muladd(f_times_t[i][1], tmp, variable_list[j]);
         }
-        for(j = i + 1; j < V1; j++){
-            // adding (x_i)*(x_j)
-            bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)]);
-
-            // adding (x_i)*(a_j_l x_l) for V1 < l < N
-            for (l = V1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[j], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            
-            // adding (x_j)*(a_i_l x_l) for V1 < l < N
-            for (l = V1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[i], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(j, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            bitsliced_gf16_t tmp_var_list[NUMB_VARS_V1_CHANGE];
-            gf16_multiply_for_variable_change_v1_v1(tmp_var_list, variable_list[i], variable_list[j]);
-            count+= 64;
-            for(l = 0; l < NUMB_VARS_V1_CHANGE - 1; l++){
-                for (  k = 0; k < ELMTS_IN_BITSLICED; k++)
-                {
-                    expand_bitsliced(tmp, tmp_var_list[l], k);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(k + V1, V1 + ((k + l) % ELMTS_IN_BITSLICED), 
-                                    NUMBER_OF_VARIABLES)], original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], 
-                                    tmp);
-                    index = get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES);
-                    index1 = get_binomial_index_in_polynomial(k + V1, V1 + ((k + l) % ELMTS_IN_BITSLICED), 
-                            NUMBER_OF_VARIABLES);
-            
-                    count++;
-                }
-            }
-            for (  k = 0; k < ELMTS_IN_BITSLICED / 2; k++)
-            {
-                expand_bitsliced(tmp, tmp_var_list[l], k);
-                bitsliced_muladd(transformed[get_binomial_index_in_polynomial(k + V1, V1 + ((k + l) % ELMTS_IN_BITSLICED), 
-                                NUMBER_OF_VARIABLES)], original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], 
-                                tmp);
-                index = get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES);
-                index1 = get_binomial_index_in_polynomial(k + V1, V1 + ((k + l) % ELMTS_IN_BITSLICED), 
-                        NUMBER_OF_VARIABLES);
-        
-                count++;
-            }
-        }
-        for(j; j < V1 + O1; j++){
-            // adding (x_i)*(x_j)
-            bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)]);
-
-            // adding (x_i)*(a_j_l x_l) for V1 + O1< l < N
-            for (l = V1 + O1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[j], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            
-            // adding (x_j)*(a_i_l x_l) for V1 < l < N
-            for (l = V1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[i], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(j, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            bitsliced_gf16_t tmp_var_list[NUMB_VARS_V1_CHANGE];
-            gf16_multiply_for_variable_change_v1_o1(tmp_var_list, variable_list[i], variable_list[j]);
-            count+=32;
-            for(l = 0; l < ELMTS_IN_BITSLICED / 2; l++){
-                for (  k = 0; k < ELMTS_IN_BITSLICED; k++)
-                {
-                    expand_bitsliced(tmp, tmp_var_list[l], k);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(k + V1, V1 + O1 + ((k + l) % O2), NUMBER_OF_VARIABLES)], 
-                                        original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp);
-                    count++;
-                }
-            }
-        }
-        for(j; j < NUMBER_OF_VARIABLES; j++){
-            // adding (x_i)*(x_j)
-            bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)]);
-
-            // adding (x_j)*(a_i_l x_l) for V1 < l < N
-            for (l = V1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[i], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-            }
+        for (size_t j = 0; j < O1; j++)
+        {
+            expand_bitsliced(tmp, original[i][1], j);
+            bitsliced_muladd(f_times_t[i][1], tmp, variable_list[j + V1]);
         }
     }
-
-    for (i = V1; i < V1 + O1; i++){
-        bitsliced_addition(transformed[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], 
-                            transformed[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], 
-                            original[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)]);
-
-
-        bitsliced_square(tmp2, variable_list[i]);
-        for(j = V1 + O1; j < NUMBER_OF_VARIABLES; j++){
-            expand_bitsliced(tmp, tmp2, j - V1);
-            bitsliced_muladd(transformed[get_square_index_in_polynomial(j, NUMBER_OF_VARIABLES)], 
-                            original[get_square_index_in_polynomial(i, NUMBER_OF_VARIABLES)], tmp);
-            count++;
-        }
-
-        for(j = i + 1; j < V1 + O1; j+=2){
-            // adding (x_i)*(x_j)
-            bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)]);
-            
-            // If we can, we it do two by two
-            if(j + 1 < V1 + O1){
-                bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j + 1, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j + 1, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j + 1, NUMBER_OF_VARIABLES)]);
-            }
-            
-            bitsliced_gf16_t tmp3;
-            if(j + 1 < V1 + O1){
-                // we can do two by two
-                tmp3[0] = (variable_list[j][0] >> 32u) | (variable_list[j + 1][0] & 0xFFFFFFFF00000000u);
-                tmp3[1] = (variable_list[j][1] >> 32u) | (variable_list[j + 1][1] & 0xFFFFFFFF00000000u);
-                tmp3[2] = (variable_list[j][2] >> 32u) | (variable_list[j + 1][2] & 0xFFFFFFFF00000000u);
-                tmp3[3] = (variable_list[j][3] >> 32u) | (variable_list[j + 1][3] & 0xFFFFFFFF00000000u);
-            }else{
-                tmp3[0] = (variable_list[j][0] >> 32u);
-                tmp3[1] = (variable_list[j][1] >> 32u);
-                tmp3[2] = (variable_list[j][2] >> 32u);
-                tmp3[3] = (variable_list[j][3] >> 32u);
-            }
-            for (l = V1; l < NUMBER_OF_VARIABLES - O1; l++){
-                expand_bitsliced(tmp2, tmp3, l - V1);
-                bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l + O1, NUMBER_OF_VARIABLES)], 
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                count++;
-            }
-            if(j + 1 < V1 + O1){
-                for (l = V1 + O1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, tmp3, l - V1 + O1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l, NUMBER_OF_VARIABLES)], 
-                                original[get_binomial_index_in_polynomial(i, j + 1, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            }
-        
-            // adding (x_j)*(a_i_l x_l) for V1 < l < N
-            for (l = V1 + O1; l < NUMBER_OF_VARIABLES; l++){
-                expand_bitsliced(tmp2, tmp3, l - V1 - O1);
-                bitsliced_muladd(transformed[get_binomial_index_in_polynomial(j, l, NUMBER_OF_VARIABLES)], 
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                count++;
-            }
-        
-            // adding (x_{j+1})*(a_i_l x_l) for V1 < l < N
-            if(j + 1 < V1 + O1){
-                for (l = V1 + O1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, tmp3, l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(j + 1, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j + 1, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-                }
-            }
-            bitsliced_gf16_t c[NUMB_VARS_O1_CHANGE];
-            gf16_double_multiply_for_variable_change_o1_o1(c, tmp3, variable_list[i]);
-            count+=32;
-            for(l = 0; l < NUMB_VARS_O1_CHANGE; l++){
-                for (k = 0; k < ELMTS_IN_BITSLICED / 2; k++)
-                {
-                    expand_bitsliced(tmp, c[l], k);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(O1 + V1 + ((k + l) % O2), k + O1 + V1,
-                                        NUMBER_OF_VARIABLES)], original[get_binomial_index_in_polynomial(i, j, 
-                                        NUMBER_OF_VARIABLES)], tmp);
-                    count++;
-                }
-                if(j + 1 < V1 + O1){
-                    for (k; k < ELMTS_IN_BITSLICED; k++)
-                    {
-                        expand_bitsliced(tmp, c[l], k);
-                        bitsliced_muladd(transformed[get_binomial_index_in_polynomial(O1 + V1 + ((k + l) % O2), k + O1 + V1,  
-                                            NUMBER_OF_VARIABLES)],  original[get_binomial_index_in_polynomial(i, j + 1, 
-                                            NUMBER_OF_VARIABLES)], tmp);
-                        count++;
-                    }
-                }
-            }
-        }
-        
-        for(j = V1 + O1; j < NUMBER_OF_VARIABLES; j++){
-            // adding (x_i)*(x_j)
-            bitsliced_addition(transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                transformed[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)],
-                                original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)]);
-
-            // adding (x_j)*(a_i_l x_l) for V1 < l < N
-            for (l = V1 + O1; l < NUMBER_OF_VARIABLES; l++){
-                    expand_bitsliced(tmp2, variable_list[i], l - V1);
-                    bitsliced_muladd(transformed[get_binomial_index_in_polynomial(i, l, NUMBER_OF_VARIABLES)], 
-                                    original[get_binomial_index_in_polynomial(i, j, NUMBER_OF_VARIABLES)], tmp2);
-                    count++;
-            }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {   
+        for (size_t j = V1; j < V1 + O1; j++)
+        {
+            expand_bitsliced(tmp, original[i][1], j- V1);
+            bitsliced_muladd(f_times_t[i][1], tmp, variable_list[j]);
         }
     }    
-    //Last O2 layer variables to put in transformed
-    for(i = get_square_index_in_polynomial(O1 + V1, NUMBER_OF_VARIABLES); i < POL_NUMBER_OF_BINOMIALS; i++){
-        bitsliced_addition(transformed[i], transformed[i], original[i]);
+    
+    // Multiply by T^t on the left
+    for (size_t i = V1 + O1; i < V1 + O1 + O2; i++)
+    {   
+        expand_bitsliced(tmp, variable_list[0], i - V1);
+        bitsliced_multiplication(f_times_t[i][0], tmp, f_times_t[0][0]);
+        bitsliced_multiplication(f_times_t[i][1], tmp, f_times_t[0][1]);
+        for (size_t j = 1; j < V1; j++)
+        {
+            expand_bitsliced(tmp, variable_list[j], i - V1);
+            bitsliced_muladd(f_times_t[i][0], tmp, f_times_t[j][0]);
+            bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
+        }
+        for (size_t j = V1; j < V1 + O1; j++)
+        {
+            expand_bitsliced(tmp, variable_list[j], i - V1);
+            bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
+        }
     }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {   
+        for (size_t j = 0; j < V1; j++)
+        {
+            expand_bitsliced(tmp, variable_list[j], i - V1);
+            bitsliced_muladd(f_times_t[i][0], tmp, f_times_t[j][0]);
+            bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
+        }
+    }
+    //We leave it as is, we will proceed to the Gaussian elimination after the multiplication by S
+}
+
+int variable_substitution_full(equation_system_t transformed, equation_system_t original, bitsliced_gf16_t variable_list[V1 + O1]){
+    int count = 0;
+
+
+
     return count;
 }
 
-void polynomials_evaluation(bitsliced_gf16_t results, bitsliced_gf16_t pol[6], bitsliced_gf16_t variables_value){
-    int i, j;
-    bitsliced_gf16_t tmp, tmp2, tmp3;
-    results[0] = 0;
-    results[1] = 0;
-    results[2] = 0;
-    results[3] = 0;
-    
-    for(i = 0; i < 3; i++){
-        expand_bitsliced(tmp, variables_value, i);
-        bitsliced_square(tmp2, tmp);
-        bitsliced_muladd(results, tmp2, pol[get_square_index_in_polynomial(i, 3)]);
-        for(j = i + 1; j < 3; j++){
-            expand_bitsliced(tmp2, variables_value, j);
-            bitsliced_multiplication(tmp3, tmp, tmp2);
-            bitsliced_muladd(results, tmp3, pol[get_binomial_index_in_polynomial(i, j, 3)]);
-        }
+
+void polynomial_evaluation_first_layer(bitsliced_gf16_t result, first_layer_polynomial_t pol, 
+                                bitsliced_gf16_t variables_value[2], int position){
+
+    bitsliced_gf16_t accumulator[2], acc_tmp[2], tmp;
+
+    bitsliced_multiplication(acc_tmp[0], pol[0][0], variables_value[0]);
+    bitsliced_multiplication(acc_tmp[1], pol[0][1], variables_value[1]);
+    expand_bitsliced(tmp, variables_value[0], 0);
+
+    bitsliced_multiplication(accumulator[0], acc_tmp[0], tmp);
+    bitsliced_multiplication(accumulator[1], acc_tmp[1], tmp);
+
+    for (size_t i = 1; i < V1; i++)
+    {
+        bitsliced_multiplication(acc_tmp[0], pol[i][0], variables_value[0]);
+        bitsliced_multiplication(acc_tmp[1], pol[i][1], variables_value[1]);
+        expand_bitsliced(tmp, variables_value[0], i);
+
+        bitsliced_muladd(accumulator[0], acc_tmp[0], tmp);
+        bitsliced_muladd(accumulator[1], acc_tmp[1], tmp);
     }
+
+    bitsliced_addition(tmp, accumulator[0], accumulator[1]);
+    result[0] = bit_parity(tmp[0]) << position;
+    result[1] = bit_parity(tmp[1]) << position;
+    result[2] = bit_parity(tmp[2]) << position;
+    result[3] = bit_parity(tmp[3]) << position;
+    
+}
+
+void polynomial_evaluation_second_layer(bitsliced_gf16_t results, first_layer_polynomial_t pol, 
+                                bitsliced_gf16_t variables_value[2], int position){
+    
+    bitsliced_gf16_t accumulator[2], acc_tmp[2], tmp;
+
+    bitsliced_multiplication(acc_tmp[0], pol[0][0], variables_value[0]);
+    bitsliced_multiplication(acc_tmp[1], pol[0][1], variables_value[1]);
+    expand_bitsliced(tmp, variables_value[0], 0);
+
+    bitsliced_multiplication(accumulator[0], acc_tmp[0], tmp);
+    bitsliced_multiplication(accumulator[1], acc_tmp[1], tmp);
+
+    for (size_t i = 1; i < V1; i++)
+    {
+        bitsliced_multiplication(acc_tmp[0], pol[i][0], variables_value[0]);
+        bitsliced_multiplication(acc_tmp[1], pol[i][1], variables_value[1]);
+        expand_bitsliced(tmp, variables_value[0], i);
+
+        bitsliced_muladd(accumulator[0], acc_tmp[0], tmp);
+        bitsliced_muladd(accumulator[1], acc_tmp[1], tmp);
+    }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {
+        bitsliced_multiplication(acc_tmp[1], pol[i][1], variables_value[1]);
+        expand_bitsliced(tmp, variables_value[1], i - V1);
+        bitsliced_muladd(accumulator[1], acc_tmp[1], tmp);
+    }
+
+    bitsliced_addition(tmp, accumulator[0], accumulator[1]);
+    results[0] = bit_parity(tmp[0]) << position;
+    results[1] = bit_parity(tmp[1]) << position;
+    results[2] = bit_parity(tmp[2]) << position;
+    results[3] = bit_parity(tmp[3]) << position;
 }
 
 
-
-void polynomials_evaluation_full(bitsliced_gf16_t results, polynomial_t pol, bitsliced_gf16_t variables_value[2]){
-    int i, j;
-    bitsliced_gf16_t tmp, tmp2, tmp3, variables_list[NUMBER_OF_VARIABLES];
-    results[0] = 0;
-    results[1] = 0;
-    results[2] = 0;
-    results[3] = 0;
-    tmp[0] = 0;
-    tmp[1] = 0;
-    tmp[2] = 0;
-    tmp[3] = 0;
-    int current_var_index = 0;
-    int index_in_pol = 0;
+void polynomial_evaluation_full(bitsliced_gf16_t results, bitsliced_gf16_t pol[NUMBER_OF_VARIABLES][2], 
+                                bitsliced_gf16_t variables_value[2], int position){
     
-    for(j = 0; j < ELMTS_IN_BITSLICED; j++){
-        expand_bitsliced(variables_list[j], variables_value[0], j);
-        bitsliced_muladd(tmp, variables_list[j], pol[index_in_pol]);      
-        index_in_pol++;  
-    }
-    for(j; j < NUMBER_OF_VARIABLES; j++){
-        expand_bitsliced(variables_list[j], variables_value[1], j - ELMTS_IN_BITSLICED);
-        bitsliced_muladd(tmp, variables_list[j], pol[index_in_pol]);
-        index_in_pol++; 
-    }
-    bitsliced_muladd(results, tmp, variables_list[0]);
+    bitsliced_gf16_t accumulator[2], acc_tmp[2], tmp;
 
-    for(current_var_index = 1; current_var_index < NUMBER_OF_VARIABLES - 1; current_var_index++){
-        bitsliced_multiplication(tmp, variables_list[current_var_index], pol[index_in_pol]);
-        index_in_pol++;
-        for(j = current_var_index + 1; j < NUMBER_OF_VARIABLES; j++){
-            bitsliced_muladd(tmp, variables_list[j], pol[index_in_pol]);
-            index_in_pol++;
-        }
-        bitsliced_muladd(results, tmp, variables_list[current_var_index]);
-    }
-    bitsliced_square(tmp, variables_list[current_var_index]);
-    bitsliced_muladd(results, tmp, pol[index_in_pol]);
-}
+    bitsliced_multiplication(acc_tmp[0], pol[0][0], variables_value[0]);
+    bitsliced_multiplication(acc_tmp[1], pol[0][1], variables_value[1]);
+    expand_bitsliced(tmp, variables_value[0], 0);
 
-static inline uint64_t bit_parity(uint64_t v){
-    v ^= v >> 32;
-    v ^= v >> 16;
-    v ^= v >> 8;
-    v ^= v >> 4;
-    v &= 0xf;
-    return (0x6996 >> v) & 1;
+    bitsliced_multiplication(accumulator[0], acc_tmp[0], tmp);
+    bitsliced_multiplication(accumulator[1], acc_tmp[1], tmp);
+
+    for (size_t i = 1; i < V1; i++)
+    {
+        bitsliced_multiplication(acc_tmp[0], pol[i][0], variables_value[0]);
+        bitsliced_multiplication(acc_tmp[1], pol[i][1], variables_value[1]);
+        expand_bitsliced(tmp, variables_value[0], i);
+
+        bitsliced_muladd(accumulator[0], acc_tmp[0], tmp);
+        bitsliced_muladd(accumulator[1], acc_tmp[1], tmp);
+    }
+    for (size_t i = V1; i < NUMBER_OF_VARIABLES; i++)
+    {
+        bitsliced_multiplication(acc_tmp[0], pol[i][0], variables_value[0]);
+        bitsliced_multiplication(acc_tmp[1], pol[i][1], variables_value[1]);
+        expand_bitsliced(tmp, variables_value[1], i - V1);
+
+        bitsliced_muladd(accumulator[0], acc_tmp[0], tmp);
+        bitsliced_muladd(accumulator[1], acc_tmp[1], tmp);
+    }
+
+    bitsliced_addition(tmp, accumulator[0], accumulator[1]);
+    results[0] = bit_parity(tmp[0]) << position;
+    results[1] = bit_parity(tmp[1]) << position;
+    results[2] = bit_parity(tmp[2]) << position;
+    results[3] = bit_parity(tmp[3]) << position;
+    
 }
 
 void scalar_product(uint8_t pos_to_put_res, bitsliced_gf16_t res, bitsliced_gf16_t in1, bitsliced_gf16_t in2){
@@ -734,7 +572,7 @@ void multiply_y_by_t(bitsliced_gf16_t result[2], bitsliced_gf16_t t[V1 + O1],
     }    
 }
 
-int generate_random_f(polynomial_t f){
+/* int generate_random_f(polynomial_t f){
 
     memset(f, 0, sizeof(polynomial_t));
     uint8_t buf[(V1*(V1 + 1)/2 + V1 * O1) * sizeof(bitsliced_gf16_t) +  (O1*(O1 + 1)/2 + O2 * O1)];
@@ -787,3 +625,4 @@ int generate_random_f(polynomial_t f){
     }
     return SUCCESS;
 }
+ */

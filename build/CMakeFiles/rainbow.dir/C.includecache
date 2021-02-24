@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/flocau01/projects/pqc_rainbow_signature/src/lib/gf16.c
+gf16.h
+/home/flocau01/projects/pqc_rainbow_signature/src/lib/gf16.h
+time.h
+-
+stdio.h
+-
+immintrin.h
+-
+
+/home/flocau01/projects/pqc_rainbow_signature/src/lib/gf16.h
+stdint.h
+-
+

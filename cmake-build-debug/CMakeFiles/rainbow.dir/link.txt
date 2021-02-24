@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc librainbow.a  CMakeFiles/rainbow.dir/src/lib/gf16.c.o CMakeFiles/rainbow.dir/src/lib/keygen.c.o CMakeFiles/rainbow.dir/src/lib/rng.c.o CMakeFiles/rainbow.dir/src/lib/utils_prng.c.o CMakeFiles/rainbow.dir/src/lib/utils_hash.c.o CMakeFiles/rainbow.dir/src/lib/sign.c.o CMakeFiles/rainbow.dir/src/lib/verify.c.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib librainbow.a

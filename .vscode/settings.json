@@ -1,3 +1,8 @@
 {
-    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.associations": {
+        "gf16.h": "c",
+        "utils_prng.h": "c",
+        "keygen.h": "c"
+    }
 }

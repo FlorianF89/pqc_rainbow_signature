@@ -1,11 +1,8 @@
 # ninja log v5
-1	568	1609862338300029631	CMakeFiles/rainbow.dir/src/lib/gf16.c.o	7efd92e49ec70e7
-1	567	1609862338298054142	CMakeFiles/pqc_rainbow.dir/src/main/signature_system.c.o	e3f99bcdf9a14777
-1	352	1609862338081659863	CMakeFiles/rainbow.dir/src/lib/keygen.c.o	8b17e36327cd2cd2
-1	334	1609862338063475807	CMakeFiles/rainbow.dir/src/lib/rng.c.o	ba96375ee348a85f
-2	288	1609862338018874068	CMakeFiles/rainbow.dir/src/lib/sign.c.o	f52d1f1e56e9b504
-3	237	1609862337967164702	CMakeFiles/rainbow.dir/src/lib/verify.c.o	f6534a48b593635a
-1	230	1609862337959651819	CMakeFiles/rainbow.dir/src/lib/utils_prng.c.o	df87a36e743dc98e
-2	220	1609862337945550461	CMakeFiles/rainbow.dir/src/lib/utils_hash.c.o	9182c4bf92550a3b
-568	4079	1609862341813426000	librainbow.a	5b2bf9bf077eb7f0
-0	210	1609862337935377897	CMakeFiles/pqc_rainbow.dir/src/main/timing-functions.c.o	25fdc7c3ba85c2a0
+72	112	1614174971219729133	pqc_rainbow	a300b867fa14e36b
+1	215	1613072090792774446	CMakeFiles/rainbow.dir/src/lib/gf16.c.o	1812e4ece01da0a6
+66	72	1614174971183729006	librainbow.a	a4640b158d10d47c
+1	236	1614156036495738831	CMakeFiles/pqc_rainbow.dir/src/main/signature_system.c.o	eabc689ec112be1f
+1	61	1614174971171728963	CMakeFiles/pqc_rainbow.dir/src/main/test_functions.c.o	5c4083171b50cf5
+1	66	1614174971175728978	CMakeFiles/rainbow.dir/src/lib/keygen.c.o	1ed077d8def8e7f3
+0	69	1614059952876579469	CMakeFiles/rainbow.dir/src/lib/rng.c.o	fa028c09e0030414

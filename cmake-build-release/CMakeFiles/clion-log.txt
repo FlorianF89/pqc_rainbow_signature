@@ -1,7 +1,0 @@
-"/Users/floriancaullery/Library/Application Support/JetBrains/Toolbox/apps/CLion/ch-0/202.6397.106/CLion.app/Contents/bin/cmake/mac/bin/cmake" -DCMAKE_BUILD_TYPE=Release -G "CodeBlocks - Unix Makefiles" /Users/floriancaullery/CLionProjects/pqc_rainbow_signature
-c flags =  -Ofast
--- Found OpenSSL: /usr/local/lib/libcrypto.dylib (found version "3.0.0")  
--- Found OpenSSL: /usr/local/lib/libcrypto.dylib (found version "3.0.0")  
--- Configuring done
--- Generating done
--- Build files have been written to: /Users/floriancaullery/CLionProjects/pqc_rainbow_signature/cmake-build-release

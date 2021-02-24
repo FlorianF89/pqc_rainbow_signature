@@ -9,15 +9,35 @@
 #include "parameters.h"
 #include "utils_prng.h"
 
-typedef bitsliced_gf16_t polynomial_t[POL_NUMBER_OF_BINOMIALS];
+#define ELMTS_IN_BITSLICED 64
 
-int variable_substitution_full(polynomial_t transformed, polynomial_t original, bitsliced_gf16_t variable_list[V1 + O1]);
+typedef bitsliced_gf16_t first_layer_polynomial_t[V1][2];
 
-void variable_substitution(bitsliced_gf16_t transformed[6], bitsliced_gf16_t original[6], bitsliced_gf16_t variable_list[3]);
+typedef bitsliced_gf16_t second_layer_polynomial_t[V1 + O1][2];
 
-void polynomials_evaluation(bitsliced_gf16_t results, bitsliced_gf16_t pol[6], bitsliced_gf16_t variables_value);
+typedef struct equation_system_t{
+    first_layer_polynomial_t first_layer_polynomials[O1];
+    second_layer_polynomial_t second_layer_polynomials[O2];
+}equation_system_t;
 
-void polynomials_evaluation_full(bitsliced_gf16_t results, polynomial_t pol, bitsliced_gf16_t variables_value[2]);
+void variable_substitution_first_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
+                                            first_layer_polynomial_t original, 
+                                            bitsliced_gf16_t variable_list[V1 + O1]);
+
+void variable_substitution_second_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
+                                            second_layer_polynomial_t original, 
+                                            bitsliced_gf16_t variable_list[V1 + O1]);
+
+int variable_substitution_full(equation_system_t transformed, equation_system_t original, bitsliced_gf16_t variable_list[V1 + O1]);
+
+void polynomial_evaluation_first_layer(bitsliced_gf16_t result, first_layer_polynomial_t pol, 
+                                bitsliced_gf16_t variables_value[2], int position);
+
+void polynomial_evaluation_second_layer(bitsliced_gf16_t results, first_layer_polynomial_t pol, 
+                                bitsliced_gf16_t variables_value[2], int position);
+
+void polynomial_evaluation_full(bitsliced_gf16_t results, bitsliced_gf16_t pol[NUMBER_OF_VARIABLES][2], 
+                                bitsliced_gf16_t variables_value[2], int position);
 
 void scalar_product(uint8_t pos_to_put_res, bitsliced_gf16_t res, bitsliced_gf16_t in1, bitsliced_gf16_t in2);
 
@@ -36,6 +56,6 @@ void multiply_y_by_t(bitsliced_gf16_t result[2], bitsliced_gf16_t t[V1 + O1],
 
 void invert_t(bitsliced_gf16_t t_inverse[V1 + O1], bitsliced_gf16_t t[V1 + O1]);
 
-int generate_random_f(polynomial_t f);
+//int generate_random_f(polynomial_t f);
 
 #endif //PQC_RAINBOW_KEYGEN_H

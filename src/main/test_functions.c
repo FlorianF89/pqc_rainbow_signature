@@ -139,57 +139,7 @@ static void print_pols(bitsliced_gf16_t pol[6], int num_of_pol){
 int test_variable_substitution(){
     
 
-    polynomial_t pol, pol1;
-
-    bitsliced_gf16_t variable_list[O1 + V1], tmp;
-    memset(variable_list, 0x00, sizeof(variable_list));
-    memset(pol, 0x00, sizeof(pol));
-    pol[2970][0] = 1; //f_0 = x_0^2, f_1 = ... = f_{n-1} = 0
-    pol[2971][0] = 1; //f_0 = x_0^2 + x_0x_v1, f_1 = ... = f_{n-1} = 0
-    variable_list[V1 + 1][0] = 0xFFFFFFFF00000000; // x0 = x0 + x_v1 + ... + v_{n-1}
-    variable_list[V1][0] = 0xFFFFFFFF00000000; // x36 = x36 + x_{v1 + o1} + ... + x_{v_{n-1}}
-    //for (size_t j = 0; j < 1000000; j++)
-    //{
-    //    polynomials_evaluation_full(tmp, pol, variable_list); 
-    //    bitsliced_addition(variable_list[0], variable_list[0], tmp);
-    //}
-    size_t index = 0;
-    for (size_t i = 0; i < NUMBER_OF_VARIABLES; i++)
-    {
-        int nl = 0;
-        for (size_t j = i; j < NUMBER_OF_VARIABLES; j++)
-        {
-            if(pol[index][0] | pol[index][1] | pol[index][2] | pol[index][3]){
-                printf("x_%lu x_%lu: ", i, j);
-                print_bitsliced(pol[index], 0);
-                putchar(' ');
-                nl = 1;
-            }
-            index++;
-        }
-        if(nl)
-            putchar(10);
-    }
-    variable_substitution_full(pol1, pol, variable_list);
-
-    putchar(10);
-    index = 0;
-    for (size_t i = 0; i < NUMBER_OF_VARIABLES; i++)
-    {
-        int nl = 0;
-        for (size_t j = i; j < NUMBER_OF_VARIABLES; j++)
-        {
-            if(pol1[index][0] | pol1[index][1] | pol1[index][2] | pol1[index][3]){
-                printf("x_%lux_%lu: ", i, j);
-                print_bitsliced(pol1[index], 0);
-                putchar(' ');
-                nl = 1;
-            }
-            index++;
-        }
-        if(nl)
-            putchar(10);
-    }
+    
     
     return TEST_FAIL;
 }
@@ -206,7 +156,7 @@ int test_solve_system(){
         randombytes((uint8_t *) system, sizeof(system));
 
         memcpy(original_sys, system, sizeof(system));
-        solve_32x32_gf16_system(sol, system, coef);
+        //solve_32x32_gf16_system(sol, system, coef);
         
         matrix_vector_multiplication(tmp, original_sys, 32, sol);
         
@@ -378,67 +328,236 @@ int test_invert_t(){
     return TEST_SUCCESS;
 }
 
-int test_variable_substitution_full(){
+void print_first_layer_pol(first_layer_polynomial_t pol){
+
+    for (size_t i = 0; i < V1; i++)
+    {    
+        printf("[");
+        for (size_t j = 0; j < 36; j++)
+        {
+            print_bitsliced(pol[i][0], j);
+            printf(", ");
+        }
+        for (size_t j = 0; j < 63; j++)
+        {
+            print_bitsliced(pol[i][1], j);
+            printf(", ");
+        }
+        print_bitsliced(pol[i][1], 63);
+        printf("],");
+        putchar(10);
+    }
+    putchar(10);
+}
+
+void print_second_layer_pol(second_layer_polynomial_t pol){
+
+    for (size_t i = 0; i < V1 + O1; i++)
+    {    
+        printf("[");
+        for (size_t j = 0; j < V1; j++)
+        {
+            print_bitsliced(pol[i][0], j);
+            printf(", ");
+        }
+        for (size_t j = 0; j < O1 + O2 - 1; j++)
+        {
+            print_bitsliced(pol[i][1], j);
+            printf(", ");
+        }
+        print_bitsliced(pol[i][1], O1 + O2 - 1);
+        printf("],");
+        putchar(10);
+    }
+    putchar(10);
+}
+
+void print_t(bitsliced_gf16_t t[V1 + O1]){
+
+    for (size_t i = 0; i < V1; i++)
+    {    
+        printf("[");
+        for (size_t j = 0; j < V1; j++)
+        {
+            if(i == j){
+                printf("1, ");
+            }
+            else{
+                printf("0, ");
+            }
+        }
+        for (size_t j = 0; j < 63; j++)
+        {
+            print_bitsliced(t[i], j);
+            printf(", ");
+        }
+        print_bitsliced(t[i], 63);
+        printf("],");
+        putchar(10);
+    }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {    
+        printf("[");
+        for (size_t j = 0; j < V1 + O1; j++)
+        {
+            if(i == j){
+                printf("1, ");
+            }
+            else{
+                printf("0, ");
+            }
+        }
+        for (size_t j = V1 + O1; j < V1 + O1 + O2 - 1; j++)
+        {
+            print_bitsliced(t[i], j - V1);
+            printf(", ");
+        }
+        print_bitsliced(t[i], 63);
+        printf("],");
+        putchar(10);
+    }
+    for (size_t i = V1 + O1; i < V1 + O1 + O2; i++)
+    {    
+        printf("[");
+        for (size_t j = 0; j < V1 + O1 + O2 - 1; j++)
+        {
+            if(i == j){
+                printf("1, ");
+            }
+            else{
+                printf("0, ");
+            }
+        }
+        if(i == 99){
+                printf("1],");
+            }
+            else{
+                printf("0],");
+            }
+        putchar(10);
+    }
+    putchar(10);
+}
+
+int test_variable_substitution_first_layer(){
     
-    bitsliced_gf16_t t[O1 + V1], variables[2], result[2], test_values[2], tmp, tmp1;
-    polynomial_t f, f_o_t;
+    first_layer_polynomial_t f;
+    bitsliced_gf16_t transformed[NUMBER_OF_VARIABLES][2];
 
-    randombytes((uint8_t *) variables, sizeof(variables));
-
-    variables[0][0] &= (((uint64_t) 1) << V1) - 1;
-    variables[0][1] &= (((uint64_t) 1) << V1) - 1;
-    variables[0][2] &= (((uint64_t) 1) << V1) - 1;
-    variables[0][3] &= (((uint64_t) 1) << V1) - 1;   
-    variables[1][0] &= 0xFFFFFFFF;
-    variables[1][1] &= 0xFFFFFFFF;
-    variables[1][2] &= 0xFFFFFFFF;
-    variables[1][3] &= 0xFFFFFFFF;    
-/*     variables[0][0] = 1;
-    variables[0][1] = 0;
-    variables[0][2] = 0;
-    variables[0][3] = 0; 
-    variables[1][0] = -1lu;
-    variables[1][1] = 0;
-    variables[1][2] = 0;
-    variables[1][3] = 0;
- */    
-    //generate_random_f(f);
-    memset(f, 0, sizeof(polynomial_t));
     for (size_t i = 0; i < V1; i++)
     {
-        randombytes((uint8_t *)f[i], sizeof(bitsliced_gf16_t));
+        randombytes((uint8_t *) &f[i][0][0], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][1], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][2], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][3], (V1 + 7) / 8);
+        f[i][0][0] = (f[i][0][0] << i) & (1llu << (V1)) - 1;
+        f[i][0][1] = (f[i][0][1] << i) & (1llu << (V1)) - 1;
+        f[i][0][2] = (f[i][0][2] << i) & (1llu << (V1)) - 1;
+        f[i][0][3] = (f[i][0][3] << i) & (1llu << (V1)) - 1;
+        randombytes((uint8_t *) &f[i][1][0], (O1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][1][1], (O1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][1][2], (O1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][1][3], (O1 + 7) / 8);
+        f[i][1][0] &= (1llu << O1) - 1;
+        f[i][1][1] &= (1llu << O1) - 1;
+        f[i][1][2] &= (1llu << O1) - 1;
+        f[i][1][3] &= (1llu << O1) - 1;
     }
-    // randombytes((uint8_t *)f[V1 + O1], sizeof(bitsliced_gf16_t));
-    generate_random_t(t);
-    //memset(t, 0x00, sizeof(t));
-    
-    //for (size_t i = V1; i < V1 + O1; i++)
-    //{
-    //    t[i][0] = 0;
-    //    t[i][1] = 0;
-    //    t[i][2] = 0;
-    //    t[i][3] = 0;
-    //}
 
-    multiply_y_by_t(test_values, t, variables);
-    // put test_values and variables in right format
-    shift_left_gf16(tmp, variables[1], V1);
-    bitsliced_addition(variables[0], variables[0], tmp);
-    shift_right_gf16(variables[1], variables[1], 64 - V1);
+    bitsliced_gf16_t t[O1 + V1], tmp, tmp1, variables[2], var_times_t[2];
+    generate_random_t(t);    
+ 
+    randombytes((uint8_t *) &variables[0][0], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][1], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][2], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][3], (V1 + 7) / 8);
 
-    shift_left_gf16(tmp, test_values[1], V1);
-    bitsliced_addition(test_values[0], test_values[0], tmp);
-    shift_right_gf16(test_values[1], test_values[1], 64 - V1);
+    variables[0][0] &= (1llu << (V1)) - 1;
+    variables[0][1] &= (1llu << (V1)) - 1;
+    variables[0][2] &= (1llu << (V1)) - 1;
+    variables[0][3] &= (1llu << (V1)) - 1;
+    randombytes((uint8_t *) variables[1], sizeof(bitsliced_gf16_t));
 
-    variable_substitution_full(f_o_t, f, t);
 
-    polynomials_evaluation_full(tmp, f, test_values);
-    polynomials_evaluation_full(tmp1, f_o_t, variables);
-    
+    variable_substitution_first_layer(transformed, f, t);
+    polynomial_evaluation_full(tmp, transformed, variables, 0);
+
+    multiply_y_by_t(var_times_t, t, variables);
+    polynomial_evaluation_first_layer(tmp1, f, var_times_t, 0);
     bitsliced_addition(tmp, tmp, tmp1);
-    if(tmp[0] || tmp[1] || tmp[2] || tmp[3]){
+    if(gf16_is_zero(tmp, 0)){
+        return TEST_SUCCESS;
+    }
+    else{
         return TEST_FAIL;
     }
+    
+}
 
-    return TEST_SUCCESS;
+int test_variable_substitution_second_layer(){
+    
+    second_layer_polynomial_t f;
+    bitsliced_gf16_t transformed[NUMBER_OF_VARIABLES][2];
+    memset(f, 0, sizeof(f));
+    for (size_t i = 0; i < V1; i++)
+    {
+        /* randombytes((uint8_t *) &f[i][0][0], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][1], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][2], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][3], (V1 + 7) / 8); */
+        f[i][0][0] = -1lu;
+        f[i][0][0] = (f[i][0][0] << i) & ((1llu << (V1)) - 1);
+        f[i][0][1] = (f[i][0][1] << i) & ((1llu << (V1)) - 1);
+        f[i][0][2] = (f[i][0][2] << i) & ((1llu << (V1)) - 1);
+        f[i][0][3] = (f[i][0][3] << i) & ((1llu << (V1)) - 1);
+        f[i][1][0] = -1lu;
+        //randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));
+    }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {
+        //randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));
+        f[i][1][0] = -1lu;
+        f[i][1][0] = (f[i][1][0] << (i - V1));
+        f[i][1][1] = (f[i][1][1] << (i - V1));
+        f[i][1][2] = (f[i][1][2] << (i - V1));
+        f[i][1][3] = (f[i][1][3] << (i - V1));        
+    }
+
+    bitsliced_gf16_t t[O1 + V1], tmp, tmp1, variables[2], var_times_t[2];
+    //generate_random_t(t);   
+    memset(t, 0, sizeof(t));
+    for (size_t i = 0; i < V1; i++)
+    {
+        t[i][0] = 0x100000001lu << i;
+    }
+    for (size_t i = V1; i < V1 + O1; i++)
+    {
+        t[i][0] = 0x100000000lu << (i - V1);
+    }
+
+    //print_t(t);
+    randombytes((uint8_t *) &variables[0][0], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][1], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][2], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][3], (V1 + 7) / 8);
+
+    variables[0][0] &= (1llu << (V1)) - 1;
+    variables[0][1] &= (1llu << (V1)) - 1;
+    variables[0][2] &= (1llu << (V1)) - 1;
+    variables[0][3] &= (1llu << (V1)) - 1;
+    randombytes((uint8_t *) variables[1], sizeof(bitsliced_gf16_t));
+    //print_second_layer_pol(f);
+    variable_substitution_second_layer(transformed, f, t);
+    polynomial_evaluation_full(tmp, transformed, variables, 0);
+
+    multiply_y_by_t(var_times_t, t, variables);
+    polynomial_evaluation_second_layer(tmp1, f, var_times_t, 0);
+    bitsliced_addition(tmp, tmp, tmp1);
+    if(gf16_is_zero(tmp, 0)){
+        return TEST_SUCCESS;
+    }
+    else{
+        return TEST_FAIL;
+    }
+    
 }

@@ -1,0 +1,68 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "pqc_rainbow",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "pqc_rainbow::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-pqc_rainbow-Debug-68effdefa6562476c647.json",
+					"name" : "pqc_rainbow",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "rainbow::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-rainbow-Debug-7fe75ec173b0b5f8db6d.json",
+					"name" : "rainbow",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/flocau01/projects/pqc_rainbow_signature/build",
+		"source" : "/home/flocau01/projects/pqc_rainbow_signature"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 1
+	}
+}

@@ -55,8 +55,14 @@ int main(int argc, char **argv) {
     test_failed += test_result == TEST_SUCCESS ? 0 : 1;
     print_test_results(test_result);
 
-    printf("Executing test_variable_substitution_full()... ");
-    test_result = test_variable_substitution_full();
+    printf("Executing test_variable_substitution_first_layer()... ");
+    test_result = test_variable_substitution_first_layer();
+    total_test++;
+    test_failed += test_result == TEST_SUCCESS ? 0 : 1;
+    print_test_results(test_result);
+
+    printf("Executing test_variable_substitution_second_layer()... ");
+    test_result = test_variable_substitution_second_layer();
     total_test++;
     test_failed += test_result == TEST_SUCCESS ? 0 : 1;
     print_test_results(test_result);
