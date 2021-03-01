@@ -1,2 +1,0 @@
-/usr/bin/ar qc librainbow.a CMakeFiles/rainbow.dir/src/lib/gf16.c.o
-/usr/bin/ranlib librainbow.a

@@ -21,9 +21,14 @@ void extract_one_gf16_element_and_place_it_in_given_position(bitsliced_gf16_t de
                                                              uint8_t destination_position, bitsliced_gf16_t in,
                                                              uint8_t in_position);
 
-int bitsliced_gf16_is_one(bitsliced_gf16_t in);
+uint64_t bitsliced_gf16_is_one(bitsliced_gf16_t in, int position);
 
 void bitsliced_addition(bitsliced_gf16_t a_times_b, bitsliced_gf16_t a, bitsliced_gf16_t b);
+
+void bitsliced_conditionnal_addition(bitsliced_gf16_t a_plus_b, 
+                                    bitsliced_gf16_t a, 
+                                    bitsliced_gf16_t b,
+                                    uint64_t cond);
 
 void bitsliced_multiplication(bitsliced_gf16_t a_times_b, const bitsliced_gf16_t a, const bitsliced_gf16_t b);
 
@@ -35,5 +40,13 @@ bitsliced_vectorized_multiplication(bitsliced_gf16_t a_times_b, const bitsliced_
 void bitsliced_square(bitsliced_gf16_t a_square, bitsliced_gf16_t a);
 
 void bitsliced_inversion(bitsliced_gf16_t a_inverse, bitsliced_gf16_t a);
+
+
+uint64_t expand_bit(uint64_t const in, const unsigned int pos);
+
+
+void expand_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos);
+
+void expand_and_add_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos);
 
 #endif

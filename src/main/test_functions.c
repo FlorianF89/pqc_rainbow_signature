@@ -7,37 +7,14 @@
 #include "../lib/sign.h"
 #include "../lib/rng.h"
 #include "../lib/error_codes.h"
+#include "../lib/utils_hash.h"
 #include <stdlib.h>
 #include <time.h>
-
-void print_test_results(int result){
-    if(result == TEST_SUCCESS){
-        printf("TEST PASSED\n");
-    }else{
-        printf("TEST FAILED\n");
-    }
-}
 
 
 
 #include "openssl/sha.h"
 
-
-#ifndef _HASH_LEN
-#define _HASH_LEN (32)
-#endif
-
-
-
-static inline
-int _hash( unsigned char * digest , const unsigned char * m , unsigned long long mlen )
-{
-	SHA256_CTX sha256;
-	SHA256_Init( &sha256 );
-	SHA256_Update( &sha256 , m , mlen );
-	SHA256_Final( digest , &sha256 );
-	return 0;
-}
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
     int is_first = 0;
@@ -100,10 +77,6 @@ int test_bitsliced_muladd(){
             return TEST_FAIL;
         }
     }
-    for (size_t k = 0; k < 8800000; k++)
-    {
-        bitsliced_muladd(results, i, j);
-    }
     
     for (size_t i = 0; i < 4; i++)
     {
@@ -136,17 +109,9 @@ static void print_pols(bitsliced_gf16_t pol[6], int num_of_pol){
     }
 }
 
-int test_variable_substitution(){
-    
-
-    
-    
-    return TEST_FAIL;
-}
-
 int test_solve_system(){
     
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 1; i++)
     {
         uint8_t seed[48] = {0};
         randombytes_init(seed, NULL, NULL);
@@ -154,11 +119,23 @@ int test_solve_system(){
 
         randombytes((uint8_t *) coef, sizeof(coef));
         randombytes((uint8_t *) system, sizeof(system));
+        for (size_t i = 0; i < 32; i++)
+        {
+            shift_right_gf16(system[i], system[i], 32);
+        }
+
+        for (int i = 0; i < 32; i++)
+        {
+            system[i][0] ^= ((coef[0] >> i) & 0x01llu) << 32;
+            system[i][1] ^= ((coef[1] >> i) & 0x01llu) << 32;
+            system[i][2] ^= ((coef[2] >> i) & 0x01llu) << 32;
+            system[i][3] ^= ((coef[3] >> i) & 0x01llu) << 32;
+        }
 
         memcpy(original_sys, system, sizeof(system));
-        //solve_32x32_gf16_system(sol, system, coef);
+        solve_32x32_gf16_system(sol, system);
         
-        matrix_vector_multiplication(tmp, original_sys, 32, sol);
+        line_matrix_vector_multiplication(tmp, original_sys, 32, sol);
         
         if((tmp[0] & 0xFFFFFFFF) != (coef[0] & 0xFFFFFFFF) ||
             (tmp[1] & 0xFFFFFFFF) != (coef[1] & 0xFFFFFFFF) ||
@@ -170,8 +147,24 @@ int test_solve_system(){
     return TEST_SUCCESS;
 }
 
-int test_signature(){
-    return TEST_FAIL;
+int test_find_preimage_by_central_map(){
+
+    central_map_t f;
+    generate_random_central_map(&f);
+
+    bitsliced_gf16_t image, preimage[2], tmp;
+    randombytes((uint8_t *) image, sizeof(bitsliced_gf16_t));
+
+    find_preimage_by_central_map(preimage, f, image);
+    evaluate_central_map(tmp, &f, preimage);
+
+    bitsliced_addition(tmp, tmp, image);
+    if(tmp[0] || tmp[1] || tmp[2] || tmp[3]){
+        return TEST_FAIL;
+    }
+    else{
+        return TEST_SUCCESS;
+    }
 }
 
 int test_generate_s(){
@@ -182,10 +175,10 @@ int test_generate_s(){
     }
     for (size_t i = 0; i < O1; i++)
     {
-        if(s[i][0] & 0xFFFFFFFF00000000 ||
-           s[i][1] & 0xFFFFFFFF00000000 ||
-           s[i][2] & 0xFFFFFFFF00000000 ||
-           s[i][3] & 0xFFFFFFFF00000000){
+        if(s[i][0] & 0xFFFFFFFF ||
+           s[i][1] & 0xFFFFFFFF ||
+           s[i][2] & 0xFFFFFFFF ||
+           s[i][3] & 0xFFFFFFFF){
                return TEST_FAIL;
         }
     }
@@ -501,30 +494,19 @@ int test_variable_substitution_second_layer(){
     memset(f, 0, sizeof(f));
     for (size_t i = 0; i < V1; i++)
     {
-        /* randombytes((uint8_t *) &f[i][0][0], (V1 + 7) / 8);
+        randombytes((uint8_t *) &f[i][0][0], (V1 + 7) / 8);
         randombytes((uint8_t *) &f[i][0][1], (V1 + 7) / 8);
         randombytes((uint8_t *) &f[i][0][2], (V1 + 7) / 8);
-        randombytes((uint8_t *) &f[i][0][3], (V1 + 7) / 8); */
-        f[i][0][0] = -1lu;
-        f[i][0][0] = (f[i][0][0] << i) & ((1llu << (V1)) - 1);
-        f[i][0][1] = (f[i][0][1] << i) & ((1llu << (V1)) - 1);
-        f[i][0][2] = (f[i][0][2] << i) & ((1llu << (V1)) - 1);
-        f[i][0][3] = (f[i][0][3] << i) & ((1llu << (V1)) - 1);
-        f[i][1][0] = -1lu;
-        //randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));
+        randombytes((uint8_t *) &f[i][0][3], (V1 + 7) / 8);
+        randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));
     }
     for (size_t i = V1; i < V1 + O1; i++)
     {
-        //randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));
-        f[i][1][0] = -1lu;
-        f[i][1][0] = (f[i][1][0] << (i - V1));
-        f[i][1][1] = (f[i][1][1] << (i - V1));
-        f[i][1][2] = (f[i][1][2] << (i - V1));
-        f[i][1][3] = (f[i][1][3] << (i - V1));        
+        randombytes((uint8_t *) f[i][1], sizeof(bitsliced_gf16_t));        
     }
 
     bitsliced_gf16_t t[O1 + V1], tmp, tmp1, variables[2], var_times_t[2];
-    //generate_random_t(t);   
+    generate_random_t(t);   
     memset(t, 0, sizeof(t));
     for (size_t i = 0; i < V1; i++)
     {
@@ -535,7 +517,6 @@ int test_variable_substitution_second_layer(){
         t[i][0] = 0x100000000lu << (i - V1);
     }
 
-    //print_t(t);
     randombytes((uint8_t *) &variables[0][0], (V1 + 7) / 8);
     randombytes((uint8_t *) &variables[0][1], (V1 + 7) / 8);
     randombytes((uint8_t *) &variables[0][2], (V1 + 7) / 8);
@@ -546,7 +527,6 @@ int test_variable_substitution_second_layer(){
     variables[0][2] &= (1llu << (V1)) - 1;
     variables[0][3] &= (1llu << (V1)) - 1;
     randombytes((uint8_t *) variables[1], sizeof(bitsliced_gf16_t));
-    //print_second_layer_pol(f);
     variable_substitution_second_layer(transformed, f, t);
     polynomial_evaluation_full(tmp, transformed, variables, 0);
 
@@ -559,5 +539,130 @@ int test_variable_substitution_second_layer(){
     else{
         return TEST_FAIL;
     }
+}
+
+int test_multiply_by_s(){
     
+    //S is an involution so we test multiplying twice by S and check if the entry is unmodified
+    bitsliced_gf16_t original, result, tmp, s[O1];
+    randombytes((uint8_t *) original, sizeof(bitsliced_gf16_t));
+
+    randombytes((uint8_t *) s, sizeof(s));
+    for (size_t i = 0; i < O1; i++)
+    {
+        shift_left_gf16(s[i], s[i], O1);
+    }
+    
+    multiply_y_by_s(tmp, s, original);
+    multiply_y_by_s(result, s, tmp);
+
+    bitsliced_addition(tmp, result, original);
+
+    if(tmp[0] || tmp[1] || tmp[2] || tmp[3]){
+        return TEST_FAIL;
+    }else{
+        return TEST_SUCCESS;
+    }
+}
+
+int test_variable_private_key_to_public_key(){
+    central_map_t f;
+    bitsliced_gf16_t public_key[O1 + O2][NUMBER_OF_VARIABLES][2], s[O1], t[O1 + V1], 
+                tmp, tmp1, tmp2, variables[2], var_times_t[2];;
+
+    generate_random_central_map(&f);    
+    generate_random_t(t);    
+    generate_random_s(s);
+    randombytes((uint8_t *) &variables[0][0], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][1], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][2], (V1 + 7) / 8);
+    randombytes((uint8_t *) &variables[0][3], (V1 + 7) / 8);
+
+    variables[0][0] &= (1llu << (V1)) - 1;
+    variables[0][1] &= (1llu << (V1)) - 1;
+    variables[0][2] &= (1llu << (V1)) - 1;
+    variables[0][3] &= (1llu << (V1)) - 1;
+    randombytes((uint8_t *) variables[1], sizeof(bitsliced_gf16_t));
+
+
+    private_key_to_public_key(public_key, f, t, s);
+
+    memset(tmp1, 0, sizeof(bitsliced_gf16_t));
+    for (size_t i = 0; i < O1 + O2; i++)
+    {
+        polynomial_evaluation_full(tmp, public_key[i], variables, i);
+        bitsliced_addition(tmp1, tmp, tmp1);
+    }
+
+    memset(tmp2, 0, sizeof(bitsliced_gf16_t));
+    multiply_y_by_t(var_times_t, t, variables);
+    evaluate_central_map(tmp2, &f, var_times_t);
+
+    multiply_y_by_s(tmp, s, tmp2);
+    bitsliced_addition(tmp, tmp, tmp1);
+
+    if(tmp[0] || tmp[1] || tmp[2] || tmp[3]){
+        return TEST_FAIL;
+    }else{
+        return TEST_SUCCESS;
+    }
+}
+
+
+int test_signature(){
+
+    central_map_t f;
+    generate_random_central_map(&f);
+
+    bitsliced_gf16_t t[O1 + V1], t_inverse[O1 + V1], s[O1], tmp, tmp1[2], signature[2], public_key[O1 + O2][NUMBER_OF_VARIABLES][2];
+    generate_random_t(t);
+    generate_random_s(s);
+    invert_t(t_inverse, t);
+
+    uint8_t message[32] = {0};
+    sign_message(signature, &f, t_inverse, s, message, sizeof(message));
+
+    multiply_y_by_t(tmp1, t, signature);
+    evaluate_central_map(tmp, &f, tmp1);
+    multiply_y_by_s(tmp1[0], s, tmp);
+
+    uint8_t digest[_HASH_LEN];
+    hash_msg(digest, _HASH_LEN, message, sizeof(message));
+    memcpy(tmp, digest, sizeof(bitsliced_gf16_t));
+
+    if(tmp[0] != tmp1[0][0] || 
+        tmp[1] != tmp1[0][1] || 
+        tmp[2] != tmp1[0][2] || 
+        tmp[3] != tmp1[0][3]){
+        return TEST_FAIL;
+    }
+    else{
+        return TEST_SUCCESS;
+    }
+}
+
+
+int test_verify_positive(){
+
+    central_map_t f;
+    generate_random_central_map(&f);
+
+    bitsliced_gf16_t t[O1 + V1], t_inverse[O1 + V1], s[O1], tmp, tmp1[2], signature[2], public_key[O1 + O2][NUMBER_OF_VARIABLES][2];
+    generate_random_t(t);
+    generate_random_s(s);
+    invert_t(t_inverse, t);
+
+    uint8_t message[32] = {0};
+    sign_message(signature, &f, t_inverse, s, message, sizeof(message));
+    veri
+
+    if(tmp[0] != tmp1[0][0] || 
+        tmp[1] != tmp1[0][1] || 
+        tmp[2] != tmp1[0][2] || 
+        tmp[3] != tmp1[0][3]){
+        return TEST_FAIL;
+    }
+    else{
+        return TEST_SUCCESS;
+    }
 }

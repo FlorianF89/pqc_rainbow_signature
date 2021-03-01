@@ -10,6 +10,24 @@
 #include "error_codes.h"
 
 
+// all expanded elements of GF(16) - GF(2)
+bitsliced_gf16_t expanded_table[14] = {
+    {0, -1llu, 0, 0},               //0100
+    {-1llu, -1llu, 0, 0},           //1100
+    {0, 0, -1llu, 0},               //0010
+    {-1llu, 0, -1llu, 0},           //1010
+    {0, -1llu, -1llu, 0},           //0110
+    {-1llu, -1llu, -1llu, 0},       //1110
+    {0, 0, 0, -1llu},               //0001
+    {-1llu, 0, 0, -1llu},           //1001
+    {0, -1llu, 0, -1llu},           //0101
+    {-1llu, -1llu, 0, -1llu},       //1101
+    {0, 0, -1llu, -1llu},           //0011
+    {-1llu, 0, -1llu, -1llu},       //1011
+    {0, -1llu, -1llu, -1llu},       //0111
+    {-1llu, -1llu, -1llu, -1llu}    //1111
+};
+
 
 static inline uint64_t bit_parity(uint64_t v){
     v ^= v >> 32;
@@ -67,6 +85,30 @@ void transpose_reverse_ordered_64x64_binary_matrix(uint64_t *A) {
     }
 }
 
+void transpose_reverse_ordered_O1O2xV1_binary_matrix(uint64_t *A) {
+    uint64_t j, k;
+    uint64_t m, t;
+    int n;
+
+    for (j = 32, m = 0x00000000FFFFFFFF; j; j >>= 1, m ^= m << j) {
+        for (k = 0; k < 64; k = ((k | j) + 1) & ~j) {
+            t = (A[k] ^ (A[k | j] >> j)) & m;
+            A[k] ^= t;
+            A[k | j] ^= (t << j);
+        }
+    }
+    for (j = 0; j < V1; j++) {
+        // swap odd and even bits
+        A[j] = ((A[j] >> 1u) & 0x5555555555555555llu) | ((A[j] & 0x5555555555555555llu) << 1u);
+        A[j] = ((A[j] >> 2u) & 0x3333333333333333llu) | ((A[j] & 0x3333333333333333llu) << 2u);
+        A[j] = ((A[j] >> 4u) & 0x0F0F0F0F0F0F0F0Fllu) | ((A[j] & 0x0F0F0F0F0F0F0F0Fllu) << 4u);
+        A[j] = ((A[j] >> 8u) & 0x00FF00FF00FF00FFllu) | ((A[j] & 0x00FF00FF00FF00FFllu) << 8u);
+        A[j] = ((A[j] >> 16u) & 0x0000FFFF0000FFFFllu) | ((A[j] & 0x0000FFFF0000FFFFllu) << 16u);
+        A[j] = (A[j] >> 32u) | (A[j] << 32u);
+
+    }
+}
+
 void print_32x32_gf16_matrix(bitsliced_gf16_t m[32]) {
     int i, j;
     for (i = 0; i < 32; i++) {
@@ -98,33 +140,6 @@ void print_64x64_binary_matrix(const uint64_t *A, int is_transposed) {
     }
 }
 
-
-inline uint64_t expand_bit(uint64_t const in, const unsigned int pos){
-    
-    uint8_t c = (pos & 0x3Fu) + 1;
-    uint64_t ret =  ((in >> c) & 0x1llu);
-    return 0 - ret;
-}
-
-
-static inline void expand_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos){
-    
-    uint8_t c = (pos & 0x3Fu);
-    out[0] = 0 - ((in[0] >> c) & 0x1llu);
-    out[1] = 0 - ((in[1] >> c) & 0x1llu);
-    out[2] = 0 - ((in[2] >> c) & 0x1llu);
-    out[3] = 0 - ((in[3] >> c) & 0x1llu);
-}
-
-static inline void expand_and_add_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos){
-    
-    uint8_t c = (pos & 0x3Fu);
-    out[0] ^= 0 - ((in[0] >> c) & 0x1llu);
-    out[1] ^= 0 - ((in[1] >> c) & 0x1llu);
-    out[2] ^= 0 - ((in[2] >> c) & 0x1llu);
-    out[3] ^= 0 - ((in[3] >> c) & 0x1llu);
-}
-
 static inline unsigned int get_square_index_in_polynomial(int variable_index, int number_of_variables){
     return variable_index * number_of_variables - ((variable_index * (variable_index - 1)) / 2);
 }
@@ -135,6 +150,19 @@ static inline unsigned int get_square_index_in_polynomial(int variable_index, in
 static inline unsigned int get_binomial_index_in_polynomial(int i, int j, int number_of_variables){
     if(i > j) SWAP(i, j);
     return i *number_of_variables - ((i * (i - 1)) / 2) + (j - i);
+}
+
+//Assuming A[i] contains the i-th line
+void print_binary_matrix(uint64_t *A, int length, int width){
+    putchar(10);
+    for (int i = 0; i < length; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            printf("%ld ", (A[i] >> j) & 1u);
+        }
+        putchar(10);
+    }
 }
 
 void variable_substitution(bitsliced_gf16_t transformed[6], bitsliced_gf16_t original[6], bitsliced_gf16_t variable_list[3]){
@@ -195,6 +223,111 @@ static void inline bitsliced_rol_32(bitsliced_gf16_t in, unsigned int r){
             | ((in[3] << c) & 0xFFFFFFFFu) | ((in[3] & 0xFFFFFFFFu) >> (unsigned) ((ELMTS_IN_BITSLICED / 2) - c));
 }
 
+static void put_matrix_polynomial_into_upper_triangular_form(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2]){
+    //transposing F'4 and F'7
+    uint64_t A[64];
+    memset(A, 0, sizeof(A));
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][0][0];
+        f_times_t[i][0][0] = 0;
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < V1; i++)
+    {
+       f_times_t[i][1][0] ^= A[63 - i];
+    }
+    memset(A, 0, sizeof(A));
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][0][1];
+        f_times_t[i][0][1] = 0;
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < V1; i++)
+    {
+       f_times_t[i][1][1] ^= A[63 - i];
+    }
+    memset(A, 0, sizeof(A));
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][0][2];
+        f_times_t[i][0][2] = 0;
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < V1; i++)
+    {
+       f_times_t[i][1][2] ^= A[63 - i];
+    }
+    memset(A, 0, sizeof(A));
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][0][3];
+        f_times_t[i][0][3] = 0;
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < V1; i++)
+    {
+       f_times_t[i][1][3] ^= A[63 - i];
+    }
+
+    //transposing F'5 || F'6
+    //            F'8 || F'9
+    // Clears unwanted values and add directly to F
+    
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][1][0];
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < O1 + O2 - 1; i++)
+    {
+
+        f_times_t[i + V1][1][0] ^= (A[63 - i] & (0xFFFFFFFFFFFFFFFFllu << (i + 1)));
+        f_times_t[i + V1][1][0] &= (0xFFFFFFFFFFFFFFFFllu << i);
+    }
+    f_times_t[O1 + O2 + V1 - 1][1][0] &= (1llu << 63);
+    
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][1][1];
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < O1 + O2 - 1; i++)
+    {
+
+        f_times_t[i + V1][1][1] ^= (A[63 - i] & (0xFFFFFFFFFFFFFFFFllu << (i + 1)));
+        f_times_t[i + V1][1][1] &= (0xFFFFFFFFFFFFFFFFllu << i);
+    }
+    f_times_t[O1 + O2 + V1 - 1][1][1] &= (1llu << 63);
+    
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][1][2];
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < O1 + O2 - 1; i++)
+    {
+
+        f_times_t[i + V1][1][2] ^= (A[63 - i] & (0xFFFFFFFFFFFFFFFFllu << (i + 1)));
+        f_times_t[i + V1][1][2] &= (0xFFFFFFFFFFFFFFFFllu << i);
+    }
+    f_times_t[O1 + O2 + V1 - 1][1][2] &= (1llu << 63);
+    
+    for (size_t i = V1; i < V1 + O1 + O2; i++)
+    {
+        A[i - V1] = f_times_t[i][1][3];
+    }
+    transpose_reverse_ordered_64x64_binary_matrix(A);
+    for (size_t i = 0; i < O1 + O2 - 1; i++)
+    {
+
+        f_times_t[i + V1][1][3] ^= (A[63 - i] & (0xFFFFFFFFFFFFFFFFllu << (i + 1)));
+        f_times_t[i + V1][1][3] &= (0xFFFFFFFFFFFFFFFFllu << i);
+    }
+    f_times_t[O1 + O2 + V1 - 1][1][3] &= (1llu << 63);
+}
+
 
 void variable_substitution_first_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
                                             first_layer_polynomial_t original, 
@@ -250,7 +383,8 @@ void variable_substitution_first_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARI
             bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
         }
     }
-    //We leave it as is, we will proceed to the Gaussian elimination after the multiplication by S
+    put_matrix_polynomial_into_upper_triangular_form(f_times_t);
+
 }
 
 void variable_substitution_second_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VARIABLES][2], 
@@ -315,14 +449,79 @@ void variable_substitution_second_layer(bitsliced_gf16_t f_times_t[NUMBER_OF_VAR
             bitsliced_muladd(f_times_t[i][1], tmp, f_times_t[j][1]);
         }
     }
-    //We leave it as is, we will proceed to the Gaussian elimination after the multiplication by S
+    put_matrix_polynomial_into_upper_triangular_form(f_times_t);
 }
 
-int variable_substitution_full(equation_system_t transformed, equation_system_t original, bitsliced_gf16_t variable_list[V1 + O1]){
+//assumes the polynomial is in triangular form and constant is expanded
+static void multiply_polynomial_by_constant(bitsliced_gf16_t out[NUMBER_OF_VARIABLES][2],
+                                            bitsliced_gf16_t in[NUMBER_OF_VARIABLES][2],
+                                            bitsliced_gf16_t constant){
+    for (size_t i = 0; i < V1; i++)
+    {
+        bitsliced_multiplication(out[i][0], in[i][0], constant);
+        bitsliced_multiplication(out[i][1], in[i][1], constant);
+    }
+    for (size_t i = V1; i < NUMBER_OF_VARIABLES; i++)
+    {
+        bitsliced_multiplication(out[i][1], in[i][1], constant);
+    }
+}
+
+//adds b to a if mask is set
+//assumes the polynomial is in triangular form
+static void conditional_add_polynomials(bitsliced_gf16_t a[NUMBER_OF_VARIABLES][2],
+                                        bitsliced_gf16_t b[NUMBER_OF_VARIABLES][2],
+                                        uint64_t cond){
+
+    for (size_t i = 0; i < V1; i++)
+    {
+        bitsliced_conditionnal_addition(a[i][0], a[i][0], b[i][0], cond);
+        bitsliced_conditionnal_addition(a[i][1], a[i][1], b[i][1], cond);
+    }
+    for (size_t i = V1; i < NUMBER_OF_VARIABLES; i++)
+    {
+        bitsliced_conditionnal_addition(a[i][1], a[i][1], b[i][1], cond);
+    }
+}
+
+int private_key_to_public_key(bitsliced_gf16_t public_key[O1 + O2][NUMBER_OF_VARIABLES][2], 
+                            central_map_t original, 
+                            bitsliced_gf16_t t[V1 + O1],
+                            bitsliced_gf16_t s[O1]){
     int count = 0;
+    for (size_t i = 0; i < O1; i++)
+    {
+        variable_substitution_first_layer(public_key[i], original.first_layer_polynomials[i], t);
+    }
+    for (size_t i = O1; i < O1 + O2; i++)
+    {
+        variable_substitution_second_layer(public_key[i], original.second_layer_polynomials[i - O1], t);
+    }
 
+    //Multiply by S    
 
-
+    for (size_t i = O1; i < O1 + O2; i++)
+    {
+        uint64_t cond;
+        for (size_t k = 0; k < O1; k++)
+        {
+            cond = bitsliced_gf16_is_one(s[k], i);
+            conditional_add_polynomials(public_key[k], public_key[i], cond); 
+        }
+        for (size_t j = 0; j < 14; j++)
+        {
+            bitsliced_gf16_t f_i_times_const[NUMBER_OF_VARIABLES][2];
+            memset(f_i_times_const, 0, sizeof(f_i_times_const));
+            multiply_polynomial_by_constant(f_i_times_const, public_key[i], expanded_table[j]);
+            bitsliced_gf16_t tmp;
+            for (size_t k = 0; k < O1; k++)
+            {  
+                bitsliced_addition(tmp, expanded_table[j], s[k]);
+                cond = gf16_is_zero(tmp, i);
+                conditional_add_polynomials(public_key[k], f_i_times_const, cond); 
+            }
+        }
+    }
     return count;
 }
 
@@ -441,7 +640,7 @@ void scalar_product(uint8_t pos_to_put_res, bitsliced_gf16_t res, bitsliced_gf16
     res[3] = bit_parity(res[3]) << c;
 }
 
-void matrix_vector_multiplication(bitsliced_gf16_t res, bitsliced_gf16_t *mat, int matrix_width, bitsliced_gf16_t vec){
+void column_matrix_vector_multiplication(bitsliced_gf16_t res, bitsliced_gf16_t *mat, int matrix_width, bitsliced_gf16_t vec){
 
     bitsliced_gf16_t tmp;
     expand_bitsliced(tmp, vec, 0);
@@ -453,16 +652,47 @@ void matrix_vector_multiplication(bitsliced_gf16_t res, bitsliced_gf16_t *mat, i
     }
 }
 
-void matrix_matrix_multiplication(bitsliced_gf16_t *res, 
+void column_matrices_multiplication(bitsliced_gf16_t *res, 
                                 bitsliced_gf16_t *mat_a, int a_width, 
                                 bitsliced_gf16_t *mat_b, int b_width){
 
     for (int i = 0; i < b_width; i++)
     {
-        matrix_vector_multiplication(res[i], mat_a, a_width, mat_b[i]);
+        column_matrix_vector_multiplication(res[i], mat_a, a_width, mat_b[i]);
     }    
 }
 
+void line_matrix_vector_multiplication(bitsliced_gf16_t res, 
+                                bitsliced_gf16_t *mat, 
+                                int matrix_length, 
+                                bitsliced_gf16_t vec){
+
+    scalar_product(0, res, mat[0], vec);
+    for (int i = 1; i < matrix_length; i++)
+    {
+        bitsliced_gf16_t tmp;
+        scalar_product(i, tmp, mat[i], vec);
+        bitsliced_addition(res, tmp, res);
+    }
+    
+}
+
+void line_matrices_multiplication(bitsliced_gf16_t *res, 
+                                bitsliced_gf16_t *mat_a, int a_length,
+                                bitsliced_gf16_t *mat_b, int b_length){
+    
+    bitsliced_gf16_t tmp;
+    for (int i = 0; i < a_length; i++)
+    {
+        expand_bitsliced(tmp, mat_a[i], 0);
+        bitsliced_multiplication(res[i], tmp, mat_b[0]);
+        for (int j = 1; j < b_length; j++)
+        {
+            expand_bitsliced(tmp, mat_a[i], j);
+            bitsliced_muladd(res[i], tmp, mat_b[j]);
+        }
+    }    
+}
 
 // S's representation is by column
 int generate_random_s(bitsliced_gf16_t s[O2]){
@@ -476,16 +706,16 @@ int generate_random_s(bitsliced_gf16_t s[O2]){
     for (size_t i = 0; i < O2; i++)
     {
         memcpy(&s[i][0], buf + offset, ((O1 + 7) / 8));
-        s[i][0] &= 0xFFFFFFFF;
+        s[i][0] <<= 32;
         offset += ((O1 + 7) / 8);
         memcpy(&s[i][1], buf + offset, ((O1 + 7) / 8));
-        s[i][1] &= 0xFFFFFFFF;
+        s[i][1] <<= 32;
         offset += ((O1 + 7) / 8);
         memcpy(&s[i][2], buf + offset, ((O1 + 7) / 8));
-        s[i][2] &= 0xFFFFFFFF;
+        s[i][2] <<= 32;
         offset += ((O1 + 7) / 8);
         memcpy(&s[i][3], buf + offset, ((O1 + 7) / 8));
-        s[i][3] &= 0xFFFFFFFF;
+        s[i][3] <<= 32;
         offset += ((O1 + 7) / 8);
     }
 
@@ -543,7 +773,7 @@ void invert_t(bitsliced_gf16_t t_inverse[V1 + O1], bitsliced_gf16_t t[V1 + O1]){
         shift_right_gf16(t3[i - V1], t3[i - V1], O1);
     }
 
-    matrix_matrix_multiplication(t4_transpose, t3, O1, t1, V1);
+    column_matrices_multiplication(t4_transpose, t3, O1, t1, V1);
     for (size_t i = 0; i < V1; i++)
     {
         shift_left_gf16(t_inverse[i], t4_transpose[i], O1);
@@ -572,57 +802,59 @@ void multiply_y_by_t(bitsliced_gf16_t result[2], bitsliced_gf16_t t[V1 + O1],
     }    
 }
 
-/* int generate_random_f(polynomial_t f){
+//S's representation is by line, only the second half of the bitsliced elements is written in S
+void multiply_y_by_s(bitsliced_gf16_t result, bitsliced_gf16_t s[O1],
+                     bitsliced_gf16_t variables){
 
-    memset(f, 0, sizeof(polynomial_t));
-    uint8_t buf[(V1*(V1 + 1)/2 + V1 * O1) * sizeof(bitsliced_gf16_t) +  (O1*(O1 + 1)/2 + O2 * O1)];
-    if(randombytes(buf, sizeof(buf)) != RNG_SUCCESS){
-        return PRNG_FAILURE;
-    }
+    bitsliced_gf16_t tmp, tmp1;
+    copy_gf16(result, variables);
+    for (size_t i = 0; i < O1; i++)
+    {
+        scalar_product(i, tmp, variables, s[i]);
+        bitsliced_addition(result, result, tmp);
+    }   
+}
 
-    int offset = 0;
-    int index_in_pol = 0;
-    for (size_t i = 0; i < V1; i++)
-    {   
-        //first and second layer
-        for (size_t j = i; j < V1 + O1; j++)
+int generate_random_central_map(central_map_t *f){
+
+    for (size_t j = 0; j < O1; j++)
+    {    
+        memset(f->first_layer_polynomials[j], 0, sizeof(first_layer_polynomial_t));
+        for (size_t i = 0; i < V1; i++)
         {
-            memcpy(f[index_in_pol], buf + offset, sizeof(bitsliced_gf16_t));
-            offset += sizeof(bitsliced_gf16_t);
-            index_in_pol++;
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][0][0], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][0][1], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][0][2], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][0][3], (V1 + 7) / 8);
+            f->first_layer_polynomials[j][i][0][0] = (f->first_layer_polynomials[j][i][0][0] << i) & (1llu << (V1)) - 1;
+            f->first_layer_polynomials[j][i][0][1] = (f->first_layer_polynomials[j][i][0][1] << i) & (1llu << (V1)) - 1;
+            f->first_layer_polynomials[j][i][0][2] = (f->first_layer_polynomials[j][i][0][2] << i) & (1llu << (V1)) - 1;
+            f->first_layer_polynomials[j][i][0][3] = (f->first_layer_polynomials[j][i][0][3] << i) & (1llu << (V1)) - 1;
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][1][0], (O1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][1][1], (O1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][1][2], (O1 + 7) / 8);
+            randombytes((uint8_t *) &f->first_layer_polynomials[j][i][1][3], (O1 + 7) / 8);
+            f->first_layer_polynomials[j][i][1][0] &= (1llu << O1) - 1;
+            f->first_layer_polynomials[j][i][1][1] &= (1llu << O1) - 1;
+            f->first_layer_polynomials[j][i][1][2] &= (1llu << O1) - 1;
+            f->first_layer_polynomials[j][i][1][3] &= (1llu << O1) - 1;
         }
-        //second layer only
-        for (size_t j = V1 + O1; j < NUMBER_OF_VARIABLES; j++)
-        {
-            memcpy(&f[index_in_pol][0], buf + offset, O2 / 8);
-            offset += O2 / 8;
-            memcpy(&f[index_in_pol][1], buf + offset, O2 / 8);
-            offset += O2 / 8;
-            memcpy(&f[index_in_pol][2], buf + offset, O2 / 8);
-            offset += O2 / 8;
-            memcpy(&f[index_in_pol][3], buf + offset, O2 / 8);
-            offset += O2 / 8;
-            shift_left_gf16(f[index_in_pol],f[index_in_pol], O1);
-            index_in_pol++;
-        }        
     }
-    //second layer only
-    for (size_t i = V1; i < V1 + O1; i++)
-    {   
-        for (size_t j = i; j < NUMBER_OF_VARIABLES; j++)
+    for (size_t j = 0; j < O2; j++)
+    {
+        memset(f->second_layer_polynomials[j], 0, sizeof(second_layer_polynomial_t));
+        for (size_t i = 0; i < V1; i++)
         {
-            memcpy(&f[index_in_pol][0], buf + offset, O1 / 8);
-            offset += O1 / 8;
-            memcpy(&f[index_in_pol][1], buf + offset, O1 / 8);
-            offset += O1 / 8;
-            memcpy(&f[index_in_pol][2], buf + offset, O1 / 8);
-            offset += O1 / 8;
-            memcpy(&f[index_in_pol][3], buf + offset, O1 / 8);
-            offset += O1 / 8;
-            shift_left_gf16(f[index_in_pol],f[index_in_pol], 32);
-            index_in_pol++;
-        }        
+            randombytes((uint8_t *) &f->second_layer_polynomials[j][i][0][0], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->second_layer_polynomials[j][i][0][1], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->second_layer_polynomials[j][i][0][2], (V1 + 7) / 8);
+            randombytes((uint8_t *) &f->second_layer_polynomials[j][i][0][3], (V1 + 7) / 8);
+            randombytes((uint8_t *) f->second_layer_polynomials[j][i][1], sizeof(bitsliced_gf16_t));
+        }
+        for (size_t i = V1; i < V1 + O1; i++)
+        {
+            randombytes((uint8_t *) f->second_layer_polynomials[j][i][1], sizeof(bitsliced_gf16_t));        
+        }
     }
     return SUCCESS;
 }
- */

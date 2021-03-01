@@ -1,4 +1,0 @@
-/home/flocau01/projects/pqc_rainbow_signature/build/CMakeFiles/rebuild_cache.dir
-/home/flocau01/projects/pqc_rainbow_signature/build/CMakeFiles/edit_cache.dir
-/home/flocau01/projects/pqc_rainbow_signature/build/CMakeFiles/pqc_rainbow.dir
-/home/flocau01/projects/pqc_rainbow_signature/build/CMakeFiles/rainbow.dir

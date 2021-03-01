@@ -4,11 +4,7 @@
 #define TEST_SUCCESS 0
 #define TEST_FAIL (-1)
 
-void print_test_results(int result);
-
 int test_bitsliced_muladd();
-
-int test_variable_substitution();
 
 int test_solve_system();
 
@@ -23,5 +19,13 @@ int test_invert_t();
 int test_variable_substitution_first_layer();
 
 int test_variable_substitution_second_layer();
+
+int test_multiply_by_s();
+
+int test_variable_private_key_to_public_key();
+
+int test_find_preimage_by_central_map();
+
+int test_signature();
 
 #endif

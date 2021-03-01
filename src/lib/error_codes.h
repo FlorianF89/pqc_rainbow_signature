@@ -7,5 +7,7 @@
 
 #define SUCCESS 0
 #define PRNG_FAILURE (-1)
+#define SYSTEM_NOT_SOLVABLE (-2)
+#define SIGNATURE_FAILURE (-3)
 
 #endif //PQC_RAINBOW_ERROR_CODES_H

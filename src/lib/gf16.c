@@ -3,13 +3,11 @@
 #include <stdio.h>
 #include <immintrin.h>
 
-int bitsliced_gf16_is_one(bitsliced_gf16_t in) {
+uint64_t bitsliced_gf16_is_one(bitsliced_gf16_t in, int position) {
 
-    if ((in[0] == 1u) && (in[3] == 0) && (in[1] == 0) && (in[2] == 0)) {
-        return 1;
-    } else {
-        return 0;
-    }
+    uint64_t ret = ((in[0] >> position) & 0x01);
+    uint64_t ret2 = ((in[1] >> position) & 0x01) | ((in[2] >> position) & 0x01) | ((in[3] >> position) & 0x01);
+    return (uint64_t)((ret == 1) & (ret2 == 0));
 }
 
 
@@ -134,4 +132,42 @@ void bitsliced_inversion(bitsliced_gf16_t a_inverse, bitsliced_gf16_t a) {
     a_inverse[3] ^= tmp3;
 
     a_inverse[0] ^= tmp2 & a[0];
+}
+
+inline void bitsliced_conditionnal_addition(bitsliced_gf16_t a_plus_b, 
+                                    bitsliced_gf16_t a, 
+                                    bitsliced_gf16_t b,
+                                    uint64_t cond){
+
+    uint64_t mask = (uint64_t) 0 - (cond & 0x01llu);
+    a_plus_b[0] = a[0] ^ (b[0] & mask);
+    a_plus_b[1] = a[1] ^ (b[1] & mask);
+    a_plus_b[2] = a[2] ^ (b[2] & mask);
+    a_plus_b[3] = a[3] ^ (b[3] & mask);
+}
+
+inline uint64_t expand_bit(uint64_t const in, const unsigned int pos){
+    
+    uint8_t c = (pos & 0x3Fu) + 1;
+    uint64_t ret =  ((in >> c) & 0x1llu);
+    return 0 - ret;
+}
+
+
+inline void expand_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos){
+    
+    uint8_t c = (pos & 0x3Fu);
+    out[0] = 0 - ((in[0] >> c) & 0x1llu);
+    out[1] = 0 - ((in[1] >> c) & 0x1llu);
+    out[2] = 0 - ((in[2] >> c) & 0x1llu);
+    out[3] = 0 - ((in[3] >> c) & 0x1llu);
+}
+
+inline void expand_and_add_bitsliced(bitsliced_gf16_t out, bitsliced_gf16_t const in, const unsigned int pos){
+    
+    uint8_t c = (pos & 0x3Fu);
+    out[0] ^= 0 - ((in[0] >> c) & 0x1llu);
+    out[1] ^= 0 - ((in[1] >> c) & 0x1llu);
+    out[2] ^= 0 - ((in[2] >> c) & 0x1llu);
+    out[3] ^= 0 - ((in[3] >> c) & 0x1llu);
 }

@@ -1,8 +1,0 @@
-# ninja log v5
-72	112	1614174971219729133	pqc_rainbow	a300b867fa14e36b
-1	215	1613072090792774446	CMakeFiles/rainbow.dir/src/lib/gf16.c.o	1812e4ece01da0a6
-66	72	1614174971183729006	librainbow.a	a4640b158d10d47c
-1	236	1614156036495738831	CMakeFiles/pqc_rainbow.dir/src/main/signature_system.c.o	eabc689ec112be1f
-1	61	1614174971171728963	CMakeFiles/pqc_rainbow.dir/src/main/test_functions.c.o	5c4083171b50cf5
-1	66	1614174971175728978	CMakeFiles/rainbow.dir/src/lib/keygen.c.o	1ed077d8def8e7f3
-0	69	1614059952876579469	CMakeFiles/rainbow.dir/src/lib/rng.c.o	fa028c09e0030414

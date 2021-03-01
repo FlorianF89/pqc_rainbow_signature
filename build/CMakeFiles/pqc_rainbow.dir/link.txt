@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/pqc_rainbow.dir/src/main/signature_system.c.o CMakeFiles/pqc_rainbow.dir/src/main/test_functions.c.o -o pqc_rainbow  librainbow.a /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so 

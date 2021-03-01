@@ -14,7 +14,8 @@ set(OPENSSL_INCLUDE_DIR "/usr/local/include/")
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 add_library(rainbow src/lib/gf16.c src/lib/gf16.h src/lib/parameters.h src/lib/keygen.c src/lib/keygen.h
-            src/lib/rng.c src/lib/rng.h )
+            src/lib/sign.h src/lib/sign.c src/lib/rng.c src/lib/rng.h src/lib/utils_hash.h src/lib/utils_hash.c
+            src/lib/verify.h src/lib/verify.c)
 add_executable(pqc_rainbow src/main/signature_system.c src/main/test_functions.c)
 add_dependencies(rainbow OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(rainbow OpenSSL::SSL OpenSSL::Crypto)
