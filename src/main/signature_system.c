@@ -95,5 +95,11 @@ int main(int argc, char **argv) {
     test_failed += test_result == TEST_SUCCESS ? 0 : 1;
     print_test_results(test_result);
     printf("test_signature()\n" RESET);
+
+    test_result = test_verify_positive();
+    total_test++;
+    test_failed += test_result == TEST_SUCCESS ? 0 : 1;
+    print_test_results(test_result);
+    printf("test_verify()\n" RESET);
     return 0;
 }

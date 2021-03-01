@@ -6,25 +6,26 @@
 #include "verify.h"
 #include "hash_len_config.h"
 #include "utils_hash.h"
+#include "error_codes.h"
 
-int rainbow_verify(bitsliced_gf16_t *signature, public_key_t *public_key, uint8_t *message, uint64_t message_length) {
-    int offset = 0;
-    bitsliced_gf16_t x, signature_evaluation;
-    memset(&x, 0, sizeof(x));
-    uint8_t digest[_HASH_LEN];
-    hash_msg(digest, _HASH_LEN, message, message_length);
-    memcpy(&x.c, digest, sizeof(uint64_t));
-    offset += sizeof(uint64_t);
-    memcpy(&x.y, digest + offset, sizeof(uint64_t));
-    offset += sizeof(uint64_t);
-    memcpy(&x.x, digest + offset, sizeof(uint64_t));
-    offset += sizeof(uint64_t);
-    memcpy(&x.y_x, digest + offset, sizeof(uint64_t));
 
-    evaluate_quadratic_polynomials(&signature_evaluation, &public_key->polynomials, signature, signature + 1);
-    bitsliced_addition(&signature_evaluation, &signature_evaluation, &x);
-    uint64_t signature_verification =
-            signature_evaluation.c | signature_evaluation.y | signature_evaluation.x | signature_evaluation.y_x;
-    return signature_verification == 0;
+int rainbow_verify(bitsliced_gf16_t signature[2], 
+                    bitsliced_gf16_t public_key[NUMBER_OF_EQUATIONS][NUMBER_OF_VARIABLES][2], 
+                    uint8_t *message, uint64_t message_length){
+
+    uint8_t buf[_HASH_LEN];
+    bitsliced_gf16_t image, verif;
+    
+    hash_msg(buf, _HASH_LEN, message, message_length);
+    memcpy(image, buf, sizeof(bitsliced_gf16_t));
+    int is_valid = 1;
+    for (int i = 0; i < NUMBER_OF_EQUATIONS; i++)
+    {
+        polynomial_evaluation_full(verif, public_key[i], signature, i);
+        bitsliced_addition(verif, verif, image);
+        is_valid &= gf16_is_zero(verif, i);
+    }
+    
+    return is_valid == 1 ? SUCCESS : SIGNATURE_FAILURE;
 }
 

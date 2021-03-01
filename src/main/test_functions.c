@@ -5,6 +5,7 @@
 #include "../lib/parameters.h"
 #include "../lib/keygen.h"
 #include "../lib/sign.h"
+#include "../lib/verify.h"
 #include "../lib/rng.h"
 #include "../lib/error_codes.h"
 #include "../lib/utils_hash.h"
@@ -654,12 +655,9 @@ int test_verify_positive(){
 
     uint8_t message[32] = {0};
     sign_message(signature, &f, t_inverse, s, message, sizeof(message));
-    veri
 
-    if(tmp[0] != tmp1[0][0] || 
-        tmp[1] != tmp1[0][1] || 
-        tmp[2] != tmp1[0][2] || 
-        tmp[3] != tmp1[0][3]){
+    private_key_to_public_key(public_key, f, t, s);
+    if(rainbow_verify(signature, public_key, message, sizeof(message)) != SUCCESS){
         return TEST_FAIL;
     }
     else{

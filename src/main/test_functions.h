@@ -28,4 +28,6 @@ int test_find_preimage_by_central_map();
 
 int test_signature();
 
+int test_verify_positive();
+
 #endif
