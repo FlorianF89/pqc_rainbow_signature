@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <x86intrin.h>
 #include <string.h>
-#include <time.h>
 #include "test_functions.h"
 
 

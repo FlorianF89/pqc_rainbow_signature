@@ -10,11 +10,7 @@
 #include "../lib/error_codes.h"
 #include "../lib/utils_hash.h"
 #include <stdlib.h>
-#include <time.h>
 
-
-
-#include "openssl/sha.h"
 
 
 static void print_bitsliced(const bitsliced_gf16_t in, unsigned int bit_position) {
